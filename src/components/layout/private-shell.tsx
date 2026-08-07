@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { FolderOpen, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/actions";
+import { APP_NAME, APP_VERSION } from "@/lib/app";
 
 export function PrivateShell({ children, current }: { children: React.ReactNode; current: "dashboard" | "dossiers" }) {
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       <header className="border-b border-[#E2E8F0] bg-white">
         <div className="mx-auto flex min-h-20 max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-3 sm:px-8">
-          <Link href="/tableau-de-bord" className="focus-ring flex items-center gap-2.5 rounded-xl" aria-label="PatriGest, tableau de bord">
+          <Link href="/tableau-de-bord" className="focus-ring flex items-center gap-2.5 rounded-xl" aria-label={`${APP_NAME}, tableau de bord`}>
             <span className="flex size-10 items-center justify-center rounded-xl bg-[#2563EB] text-white"><ShieldCheck aria-hidden="true" size={22} /></span>
-            <span className="text-xl font-bold">PatriGest</span>
+            <span className="text-xl font-bold">{APP_NAME}</span>
           </Link>
           <nav className="order-3 flex w-full items-center gap-2 sm:order-2 sm:w-auto" aria-label="Navigation privée">
             <PrivateLink href="/tableau-de-bord" active={current === "dashboard"} icon={LayoutDashboard}>Tableau de bord</PrivateLink>
@@ -21,6 +22,10 @@ export function PrivateShell({ children, current }: { children: React.ReactNode;
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14">{children}</main>
+      <footer className="mx-auto flex w-full max-w-6xl flex-col px-5 pb-6 text-xs text-[#94A3B8] sm:px-8">
+        <span>{APP_NAME}</span>
+        <span>v{APP_VERSION}</span>
+      </footer>
     </div>
   );
 }

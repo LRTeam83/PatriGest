@@ -7,7 +7,7 @@ import { ManagementPeriodForm, ProtectionMeasureForm } from "@/domains/protected
 import { getMeasureLabel } from "@/domains/protected-persons/schemas/protection-measure-schema";
 import { getProtectedPerson } from "@/domains/protected-persons/services/protected-person-service";
 
-export const metadata: Metadata = { title: "Fiche dossier - PatriGest" };
+export const metadata: Metadata = { title: "Fiche dossier" };
 export const dynamic = "force-dynamic";
 
 export default async function ProtectedPersonDetailPage({ params }: { params: Promise<{ protectedPersonId: string }> }) {

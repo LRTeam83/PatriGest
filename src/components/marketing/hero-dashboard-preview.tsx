@@ -1,4 +1,5 @@
 import { ArrowDownLeft, ArrowUpRight, Bell, FolderHeart, Landmark, MoreHorizontal } from "lucide-react";
+import { APP_NAME } from "@/lib/app";
 
 const operations = [
   { label: "Retraite mensuelle", date: "12 juin", amount: "+ 1 248,40 €", positive: true },
@@ -8,7 +9,7 @@ const operations = [
 
 export function HeroDashboardPreview() {
   return (
-    <div className="relative z-10 mx-auto w-full max-w-2xl" aria-label="Aperçu visuel du tableau de bord PatriGest">
+    <div className="relative z-10 mx-auto w-full max-w-2xl" aria-label={`Aperçu visuel du tableau de bord ${APP_NAME}`}>
       <div className="absolute -inset-4 -z-10 rotate-2 rounded-[2rem] bg-blue-100/60" aria-hidden="true" />
       <div className="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-[0_24px_70px_rgba(37,99,235,0.14)]">
         <div className="flex items-center justify-between border-b border-[#E2E8F0] px-4 py-4 sm:px-6">

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import { APP_NAME, APP_SLOGAN } from "@/lib/app";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -8,9 +9,11 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "PatriGest - Gestion des personnes protégées",
-  description:
-    "PatriGest simplifie la gestion des comptes et du patrimoine des personnes protégées.",
+  title: {
+    default: APP_NAME,
+    template: `%s | ${APP_NAME}`,
+  },
+  description: APP_SLOGAN,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

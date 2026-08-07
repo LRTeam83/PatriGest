@@ -4,7 +4,7 @@ import { FolderOpen, Plus, UserRound } from "lucide-react";
 import { PrivateShell } from "@/components/layout/private-shell";
 import { getProtectedPersons } from "@/domains/protected-persons/services/protected-person-service";
 
-export const metadata: Metadata = { title: "Dossiers - PatriGest" };
+export const metadata: Metadata = { title: "Dossiers" };
 export const dynamic = "force-dynamic";
 
 export default async function ProtectedPersonsPage() {

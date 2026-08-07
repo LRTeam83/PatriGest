@@ -3,7 +3,7 @@ import { PrivateShell } from "@/components/layout/private-shell";
 import { ProtectedPersonForm } from "@/domains/protected-persons/components/protected-person-form";
 import { getAuthenticatedUser } from "@/domains/protected-persons/services/authenticated-user";
 
-export const metadata: Metadata = { title: "Nouveau dossier - PatriGest" };
+export const metadata: Metadata = { title: "Nouveau dossier" };
 export const dynamic = "force-dynamic";
 
 export default async function NewProtectedPersonPage() {

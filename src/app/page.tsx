@@ -3,6 +3,7 @@ import { FeatureCard } from "@/components/marketing/feature-card";
 import { HeroDashboardPreview } from "@/components/marketing/hero-dashboard-preview";
 import { PublicFooter } from "@/components/marketing/public-footer";
 import { PublicHeader } from "@/components/marketing/public-header";
+import { APP_NAME, APP_SLOGAN } from "@/lib/app";
 
 const features = [
   {
@@ -43,10 +44,10 @@ export default function Home() {
                 Gestion patrimoniale simplifiée
               </div>
               <h1 id="hero-title" className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-                PatriGest
+                {APP_NAME}
               </h1>
               <p className="mt-5 text-xl font-semibold leading-8 text-[#2563EB] sm:text-2xl">
-                La gestion des personnes protégées, en toute simplicité.
+                {APP_SLOGAN}
               </p>
               <p className="mt-5 max-w-lg text-base leading-7 text-[#64748B] sm:text-lg">
                 Suivez les comptes, les placements et les opérations d’une personne protégée dans un espace simple, clair et sécurisé.
@@ -90,7 +91,7 @@ export default function Home() {
                 <div>
                   <h2 id="simple-title" className="text-2xl font-bold">Pensé pour rester simple</h2>
                   <p className="mt-3 max-w-3xl leading-7 text-[#64748B]">
-                    PatriGest ne cherche pas à devenir un logiciel de comptabilité complexe. L’application est conçue pour faciliter la saisie des relevés, le suivi du patrimoine et la préparation des états de gestion.
+                    {APP_NAME} ne cherche pas à devenir un logiciel de comptabilité complexe. L’application est conçue pour faciliter la saisie des relevés, le suivi du patrimoine et la préparation des états de gestion.
                   </p>
                 </div>
               </div>
