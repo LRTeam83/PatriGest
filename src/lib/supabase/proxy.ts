@@ -1,12 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseConfig } from "./config";
+import type { Database } from "@/types/database";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
   const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig();
 
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -29,8 +30,8 @@ export async function updateSession(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getClaims();
-  const isProtectedRoute = request.nextUrl.pathname.startsWith(
-    "/tableau-de-bord",
+  const isProtectedRoute = ["/tableau-de-bord", "/dossiers"].some((path) =>
+    request.nextUrl.pathname.startsWith(path),
   );
 
   if (isProtectedRoute && !data?.claims) {
