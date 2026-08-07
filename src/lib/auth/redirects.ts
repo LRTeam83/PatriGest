@@ -22,6 +22,7 @@ export async function getApplicationOrigin() {
   if (origin) {
     try {
       const parsedOrigin = new URL(origin);
+
       if (allowedHosts.has(parsedOrigin.hostname)) {
         return parsedOrigin.origin;
       }
