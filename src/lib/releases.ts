@@ -10,6 +10,23 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.2.0",
+    date: "2026-08-08",
+    title: "Comptes et patrimoine",
+    summary: `${APP_NAME} permet désormais de gérer les comptes bancaires, les livrets et les placements d'une personne protégée.`,
+    changes: [
+      "Création et modification des comptes financiers",
+      "Gestion des comptes courants et livrets",
+      "Gestion des assurances-vie et autres placements",
+      "Valorisation des placements",
+      "Calcul automatique du patrimoine actif",
+      "Clôture et réouverture des comptes",
+      'Navigation dédiée "Comptes et patrimoine"',
+      "Contrôles de sécurité par dossier",
+      `Amélioration des confirmations avec les dialogues ${APP_NAME}`,
+    ],
+  },
+  {
     version: "0.1.0",
     date: "2026-08-07",
     title: `Première version de ${APP_NAME}`,
