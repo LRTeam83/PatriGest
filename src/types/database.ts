@@ -9,6 +9,8 @@ type MeasureType =
   | "future_protection_mandate"
   | "family_authorization";
 type ManagementPeriodStatus = "open" | "closed";
+export type FinancialAccountType = "checking" | "livret_a" | "ldds" | "csl" | "lep" | "pel" | "term_account" | "life_insurance" | "other_investment";
+type FinancialAccountStatus = "active" | "closed";
 
 export type Database = {
   public: {
@@ -71,6 +73,30 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["management_periods"]["Insert"]>;
         Relationships: [{ foreignKeyName: "management_periods_protected_person_id_fkey"; columns: ["protected_person_id"]; isOneToOne: false; referencedRelation: "protected_persons"; referencedColumns: ["id"] }];
       };
+      financial_accounts: {
+        Row: {
+          id: string; protected_person_id: string; account_type: FinancialAccountType;
+          institution_name: string; account_name: string; account_reference: string | null;
+          opening_date: string | null; closing_date: string | null; initial_balance: number;
+          initial_balance_date: string; notes: string | null; status: FinancialAccountStatus;
+          created_at: string; updated_at: string;
+        };
+        Insert: {
+          id?: string; protected_person_id: string; account_type: FinancialAccountType;
+          institution_name: string; account_name: string; account_reference?: string | null;
+          opening_date?: string | null; closing_date?: string | null; initial_balance?: number;
+          initial_balance_date: string; notes?: string | null; status?: FinancialAccountStatus;
+          created_at?: string; updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["financial_accounts"]["Insert"]>;
+        Relationships: [{ foreignKeyName: "financial_accounts_protected_person_id_fkey"; columns: ["protected_person_id"]; isOneToOne: false; referencedRelation: "protected_persons"; referencedColumns: ["id"] }];
+      };
+      account_valuations: {
+        Row: { id: string; financial_account_id: string; valuation_date: string; value: number; comment: string | null; created_at: string };
+        Insert: { id?: string; financial_account_id: string; valuation_date: string; value: number; comment?: string | null; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["account_valuations"]["Insert"]>;
+        Relationships: [{ foreignKeyName: "account_valuations_financial_account_id_fkey"; columns: ["financial_account_id"]; isOneToOne: false; referencedRelation: "financial_accounts"; referencedColumns: ["id"] }];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -82,3 +108,5 @@ export type Database = {
 export type ProtectedPerson = Database["public"]["Tables"]["protected_persons"]["Row"];
 export type ProtectionMeasure = Database["public"]["Tables"]["protection_measures"]["Row"];
 export type ManagementPeriod = Database["public"]["Tables"]["management_periods"]["Row"];
+export type FinancialAccount = Database["public"]["Tables"]["financial_accounts"]["Row"];
+export type AccountValuation = Database["public"]["Tables"]["account_valuations"]["Row"];
