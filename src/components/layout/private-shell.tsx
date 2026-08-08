@@ -1,9 +1,23 @@
 import Link from "next/link";
 import { FolderOpen, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/actions";
+import { ReleaseNotice } from "@/components/releases/release-notice";
+import { getAuthenticatedUser } from "@/domains/protected-persons/services/authenticated-user";
 import { APP_NAME, APP_VERSION } from "@/lib/app";
+import { LATEST_RELEASE } from "@/lib/releases";
 
-export function PrivateShell({ children, current }: { children: React.ReactNode; current: "dashboard" | "dossiers" }) {
+export async function PrivateShell({ children, current }: { children: React.ReactNode; current: "dashboard" | "dossiers" }) {
+  const { supabase, userId } = await getAuthenticatedUser();
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("last_seen_version")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) throw new Error("Impossible de vérifier la version lue.");
+
+  const showReleaseNotice = profile?.last_seen_version !== APP_VERSION;
+
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       <header className="border-b border-[#E2E8F0] bg-white">
@@ -21,10 +35,11 @@ export function PrivateShell({ children, current }: { children: React.ReactNode;
           </form>
         </div>
       </header>
+      {showReleaseNotice && <ReleaseNotice release={LATEST_RELEASE} />}
       <main className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14">{children}</main>
       <footer className="mx-auto flex w-full max-w-6xl flex-col px-5 pb-6 text-xs text-[#94A3B8] sm:px-8">
         <span>{APP_NAME}</span>
-        <span>v{APP_VERSION}</span>
+        <Link href="/historique-versions" className="focus-ring w-fit rounded hover:text-[#64748B]">v{APP_VERSION}</Link>
       </footer>
     </div>
   );

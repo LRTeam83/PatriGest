@@ -10,8 +10,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Versionnement de l’application
 
-À chaque fonctionnalité importante validée :
+À chaque nouvelle release :
 
-- incrémenter `APP_VERSION` ;
-- mettre à jour `CHANGELOG.md` ;
-- créer un tag Git.
+1. incrémenter `APP_VERSION` ;
+2. ajouter une entrée correspondante dans `src/lib/releases.ts` ;
+3. rédiger les nouveautés en français ;
+4. créer le tag Git correspondant après validation.

@@ -14,9 +14,9 @@ export type Database = {
   public: {
     Tables: {
       profiles: {
-        Row: { id: string; first_name: string | null; last_name: string | null; created_at: string; updated_at: string };
-        Insert: { id: string; first_name?: string | null; last_name?: string | null; created_at?: string; updated_at?: string };
-        Update: { first_name?: string | null; last_name?: string | null; updated_at?: string };
+        Row: { id: string; first_name: string | null; last_name: string | null; last_seen_version: string | null; created_at: string; updated_at: string };
+        Insert: { id: string; first_name?: string | null; last_name?: string | null; last_seen_version?: string | null; created_at?: string; updated_at?: string };
+        Update: { first_name?: string | null; last_name?: string | null; last_seen_version?: string | null; updated_at?: string };
         Relationships: [];
       };
       protected_persons: {

@@ -10,7 +10,7 @@ export function PublicFooter() {
           <div className="flex items-center gap-2.5 font-bold"><ShieldCheck aria-hidden="true" size={22} className="text-[#2563EB]" />{APP_NAME}</div>
           <p className="mt-3 text-sm text-[#64748B]">{APP_SLOGAN}</p>
           <p className="mt-5 text-xs text-[#94A3B8]">© {new Date().getFullYear()} {APP_NAME}. Tous droits réservés.</p>
-          <p className="mt-1 text-xs text-[#94A3B8]">{APP_NAME} v{APP_VERSION}</p>
+          <Link href="/historique-versions" className="focus-ring mt-1 inline-block rounded text-xs text-[#94A3B8] hover:text-[#64748B]">{APP_NAME} v{APP_VERSION}</Link>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold text-[#64748B]" aria-label="Navigation de pied de page">
           <Link className="focus-ring rounded-md hover:text-[#2563EB]" href="#fonctionnalites">Fonctionnalités</Link>
