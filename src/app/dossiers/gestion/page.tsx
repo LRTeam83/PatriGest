@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { PrivateShell } from "@/components/layout/private-shell";
 import { ProtectedPersonList } from "@/domains/protected-persons/components/protected-person-list";
 import { getProtectedPersons } from "@/domains/protected-persons/services/protected-person-service";
 
-export const metadata: Metadata = { title: "Dossiers" };
+export const metadata: Metadata = { title: "Gérer les dossiers" };
 export const dynamic = "force-dynamic";
 
-export default async function ProtectedPersonsPage() {
+export default async function ManageProtectedPersonsPage() {
   const persons = await getProtectedPersons();
-  if (persons.length === 1 && persons[0].status === "active") redirect(`/dossiers/${persons[0].id}/comptes`);
-  return <PrivateShell current="dossiers"><ProtectedPersonList persons={persons} /></PrivateShell>;
+  return <PrivateShell current="dossier-management"><ProtectedPersonList persons={persons} /></PrivateShell>;
 }

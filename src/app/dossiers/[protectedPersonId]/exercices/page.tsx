@@ -15,11 +15,11 @@ export default async function ManagementPeriodsPage({ params }: { params: Promis
   if (!z.uuid().safeParse(protectedPersonId).success) notFound();
   const person = await getProtectedPerson(protectedPersonId);
   if (!person) notFound();
-  return <PrivateShell current="dossiers">
-    <AppBreadcrumb items={[{ label: "Tableau de bord", href: "/tableau-de-bord" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}` }, { label: "Exercices de gestion" }]} />
-    <p className="text-sm font-bold uppercase tracking-[0.14em] text-[#2563EB]">{person.first_name} {person.last_name}</p>
-    <h1 className="mt-2 text-3xl font-bold">Exercices de gestion</h1>
-    <p className="mt-2 text-[#64748B]">Consultez les périodes ouvertes et clôturées du dossier.</p>
+  return <PrivateShell current="dossiers" dossier={{ id: protectedPersonId, name: `${person.first_name} ${person.last_name}`, current: "periods" }}>
+    <AppBreadcrumb items={[{ label: "Dossiers", href: "/dossiers" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}/comptes` }, { label: "Exercices de gestion" }]} />
+    <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#2563EB]">{person.first_name} {person.last_name}</p>
+    <h1 className="mt-1 text-2xl font-bold sm:text-[28px]">Exercices de gestion</h1>
+    <p className="mt-1 text-sm text-[#64748B]">Consultez les périodes ouvertes et clôturées du dossier.</p>
     <DossierNavigation protectedPersonId={protectedPersonId} current="periods" />
     <ManagementPeriodManager protectedPersonId={protectedPersonId} periods={person.managementPeriods} />
   </PrivateShell>;

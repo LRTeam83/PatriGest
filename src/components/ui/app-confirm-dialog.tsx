@@ -40,14 +40,14 @@ export function AppConfirmDialog({ open, title, description, subject, children, 
       onCancel={(event) => { event.preventDefault(); onClose(); }}
       onClose={onClose}
     >
-      <div className="p-5 sm:p-7">
-        <div className="flex items-start justify-between gap-4">
-          <div><h2 id={titleId} className="text-xl font-bold tracking-tight sm:text-2xl">{title}</h2><p id={descriptionId} className="mt-3 text-sm leading-6 text-[#64748B]">{description}</p></div>
+      <div className="p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div><h2 id={titleId} className="text-lg font-bold tracking-tight sm:text-xl">{title}</h2><p id={descriptionId} className="mt-2 text-sm leading-5 text-[#64748B]">{description}</p></div>
           <button type="button" className="focus-ring flex size-9 shrink-0 items-center justify-center rounded-lg text-[#64748B] hover:bg-slate-100" aria-label="Fermer la boîte de dialogue" onClick={onClose}><X aria-hidden="true" size={19} /></button>
         </div>
-        {subject && <p className="mt-5 rounded-xl bg-[#F8FAFC] px-4 py-3 text-sm font-bold text-[#334155]">{subject}</p>}
-        {children && <div className="mt-5">{children}</div>}
-        <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        {subject && <p className="mt-3 rounded-lg bg-[#F8FAFC] px-3 py-2 text-sm font-bold text-[#334155]">{subject}</p>}
+        {children && <div className="mt-3">{children}</div>}
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button ref={cancelButtonRef} type="button" className="button button-secondary" onClick={onClose}>Annuler</button>
           {actions}
         </div>

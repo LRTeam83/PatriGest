@@ -24,11 +24,11 @@ export default async function EditOperationPage({ params }: { params: Promise<{ 
   const [accounts, categories, transaction] = await Promise.all([getFinancialAccounts(protectedPersonId), getCategories(false), getTransaction(transactionId)]);
   if (!transaction || transaction.transfer_id || transaction.account.protected_person_id !== protectedPersonId) notFound();
   const closed = isDateInClosedPeriod(transaction.transaction_date, person.managementPeriods);
-  return <PrivateShell current="dossiers">
-    <AppBreadcrumb items={[{ label: "Tableau de bord", href: "/tableau-de-bord" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}` }, { label: "Opérations", href: `/dossiers/${protectedPersonId}/operations` }, { label: "Modifier" }]} />
-    <p className="text-sm font-bold uppercase tracking-[0.14em] text-[#2563EB]">{person.first_name} {person.last_name}</p>
-    <h1 className="mt-2 text-3xl font-bold">Modifier l’opération</h1>
+  return <PrivateShell current="dossiers" dossier={{ id: protectedPersonId, name: `${person.first_name} ${person.last_name}`, current: "operations" }}>
+    <AppBreadcrumb items={[{ label: "Dossiers", href: "/dossiers" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}/comptes` }, { label: "Opérations", href: `/dossiers/${protectedPersonId}/operations` }, { label: "Modifier" }]} />
+    <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#2563EB]">{person.first_name} {person.last_name}</p>
+    <h1 className="mt-1 text-2xl font-bold sm:text-[28px]">Modifier l’opération</h1>
     <DossierNavigation protectedPersonId={protectedPersonId} current="operations" />
-    {closed ? <section className="mt-8 rounded-2xl border border-[#E2E8F0] bg-white p-8 text-center"><span className="mx-auto flex size-11 items-center justify-center rounded-xl bg-slate-100 text-[#64748B]"><LockKeyhole size={20} /></span><h2 className="mt-4 text-lg font-bold">Exercice clôturé</h2><p className="mx-auto mt-2 max-w-xl text-sm text-[#64748B]">Cette opération appartient à un exercice clôturé et ne peut plus être modifiée.</p><Link href={`/dossiers/${protectedPersonId}/operations`} className="button button-secondary mt-6">Retour aux opérations</Link></section> : <section className="mt-8 rounded-2xl border border-[#E2E8F0] bg-white p-6 sm:p-8"><TransactionForm personId={protectedPersonId} accounts={accounts} categories={categories} transaction={transaction} /></section>}
+    {closed ? <section className="mt-5 rounded-xl border border-[#E2E8F0] bg-white p-6 text-center"><span className="mx-auto flex size-9 items-center justify-center rounded-lg bg-slate-100 text-[#64748B]"><LockKeyhole size={17} /></span><h2 className="mt-3 text-base font-bold">Exercice clôturé</h2><p className="mx-auto mt-1 max-w-xl text-xs text-[#64748B]">Cette opération appartient à un exercice clôturé et ne peut plus être modifiée.</p><Link href={`/dossiers/${protectedPersonId}/operations`} className="button button-secondary mt-4">Retour aux opérations</Link></section> : <section className="mt-5 max-w-4xl rounded-xl border border-[#E2E8F0] bg-white p-4 sm:p-5"><TransactionForm personId={protectedPersonId} accounts={accounts} categories={categories} transaction={transaction} /></section>}
   </PrivateShell>;
 }

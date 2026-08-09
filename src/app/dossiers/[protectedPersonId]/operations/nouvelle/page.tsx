@@ -18,11 +18,11 @@ export default async function NewOperationPage({ params }: { params: Promise<{ p
   const person = await getProtectedPerson(protectedPersonId);
   if (!person) notFound();
   const [accounts, categories] = await Promise.all([getFinancialAccounts(protectedPersonId), getCategories(false)]);
-  return <PrivateShell current="dossiers">
-    <AppBreadcrumb items={[{ label: "Tableau de bord", href: "/tableau-de-bord" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}` }, { label: "Opérations", href: `/dossiers/${protectedPersonId}/operations` }, { label: "Nouvelle opération" }]} />
-    <p className="text-sm font-bold uppercase tracking-[0.14em] text-[#2563EB]">{person.first_name} {person.last_name}</p>
-    <h1 className="mt-2 text-3xl font-bold">Ajouter une opération</h1>
+  return <PrivateShell current="dossiers" dossier={{ id: protectedPersonId, name: `${person.first_name} ${person.last_name}`, current: "operations" }}>
+    <AppBreadcrumb items={[{ label: "Dossiers", href: "/dossiers" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}/comptes` }, { label: "Opérations", href: `/dossiers/${protectedPersonId}/operations` }, { label: "Nouvelle opération" }]} />
+    <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#2563EB]">{person.first_name} {person.last_name}</p>
+    <h1 className="mt-1 text-2xl font-bold sm:text-[28px]">Ajouter une opération</h1>
     <DossierNavigation protectedPersonId={protectedPersonId} current="operations" />
-    <section className="mt-8 rounded-2xl border border-[#E2E8F0] bg-white p-6 sm:p-8"><TransactionForm personId={protectedPersonId} accounts={accounts} categories={categories} /></section>
+    <section className="mt-5 max-w-4xl rounded-xl border border-[#E2E8F0] bg-white p-4 sm:p-5"><TransactionForm personId={protectedPersonId} accounts={accounts} categories={categories} /></section>
   </PrivateShell>;
 }

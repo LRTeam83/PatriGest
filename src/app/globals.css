@@ -181,6 +181,50 @@ a {
   color: #1d4ed8;
 }
 
+.private-content .auth-label {
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.private-content h1 {
+  font-size: 22px;
+  line-height: 28px;
+}
+
+@media (min-width: 640px) {
+  .private-content h1 {
+    font-size: 24px;
+    line-height: 30px;
+  }
+}
+
+.private-content input.auth-input,
+.private-content select.auth-input {
+  height: 36px;
+  border-radius: 10px;
+  padding-inline: 10px;
+  font-size: 12px;
+}
+
+.private-content textarea.auth-input {
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.private-content .button {
+  min-height: 36px;
+  border-radius: 10px;
+  padding-inline: 14px;
+  font-size: 12px;
+}
+
+.private-content .auth-submit {
+  min-height: 36px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
 .decorative-blob {
   position: absolute;
   border-radius: 9999px;

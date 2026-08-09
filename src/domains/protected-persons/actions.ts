@@ -11,6 +11,7 @@ import {
   closeManagementPeriod,
   createProtectedPerson,
   createProtectionMeasure,
+  reopenManagementPeriod,
   updateManagementPeriod,
 } from "./services/protected-person-service";
 import type { ProtectedPersonActionState } from "./state";
@@ -96,4 +97,18 @@ export async function closeManagementPeriodAction(protectedPersonId: string, per
   revalidatePath(`/dossiers/${protectedPersonId}`);
   revalidatePath(`/dossiers/${protectedPersonId}/exercices`);
   redirect(`/dossiers/${protectedPersonId}/exercices`);
+}
+
+export async function reopenManagementPeriodAction(protectedPersonId: string, periodId: string, _state: ProtectedPersonActionState, _formData: FormData): Promise<ProtectedPersonActionState> {
+  void _state;
+  void _formData;
+  if (![protectedPersonId, periodId].every((id) => z.uuid().safeParse(id).success)) return { status: "error", message: "Exercice invalide." };
+  try {
+    await reopenManagementPeriod(protectedPersonId, periodId);
+    revalidatePath(`/dossiers/${protectedPersonId}`);
+    revalidatePath(`/dossiers/${protectedPersonId}/exercices`);
+    return { status: "success", message: "L’exercice a été réouvert." };
+  } catch {
+    return { status: "error", message: "Impossible de réouvrir cet exercice." };
+  }
 }

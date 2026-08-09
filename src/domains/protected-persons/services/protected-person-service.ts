@@ -136,3 +136,15 @@ export async function closeManagementPeriod(protectedPersonId: string, periodId:
   const { data, error } = await supabase.from("management_periods").update({ status: "closed", closed_at: new Date().toISOString() }).eq("id", periodId).eq("protected_person_id", protectedPersonId).eq("status", "open").select("id").maybeSingle();
   if (error || !data) throw new Error("Exercice ouvert introuvable.");
 }
+
+export async function reopenManagementPeriod(protectedPersonId: string, periodId: string) {
+  const { supabase, userId } = await getAuthenticatedUser();
+  const { data: person } = await supabase.from("protected_persons").select("id").eq("id", protectedPersonId).eq("owner_id", userId).maybeSingle();
+  if (!person) throw new Error("Dossier introuvable.");
+
+  const { data: period, error: periodError } = await supabase.from("management_periods").select("id").eq("id", periodId).eq("protected_person_id", protectedPersonId).eq("status", "closed").maybeSingle();
+  if (periodError || !period) throw new Error("Exercice clôturé introuvable.");
+
+  const { data, error } = await supabase.from("management_periods").update({ status: "open", closed_at: null }).eq("id", periodId).eq("protected_person_id", protectedPersonId).eq("status", "closed").select("id").maybeSingle();
+  if (error || !data) throw new Error("Impossible de réouvrir cet exercice.");
+}
