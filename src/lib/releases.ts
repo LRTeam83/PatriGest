@@ -10,6 +10,27 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.3.0",
+    date: "2026-08-09",
+    title: "Opérations financières",
+    summary: `${APP_NAME} permet désormais de saisir et suivre les recettes, dépenses et virements internes, avec calcul automatique des soldes et contrôle des exercices de gestion.`,
+    changes: [
+      "Saisie des recettes et dépenses",
+      "Virements internes entre comptes",
+      "Calcul automatique des soldes",
+      "Journal des opérations avec filtres",
+      "Catégories système et personnalisées",
+      "Catégories utilisables en recettes, dépenses ou les deux",
+      "Archivage et réactivation des catégories personnelles",
+      "Gestion des exercices de gestion",
+      "Verrouillage des opérations sur exercices clôturés",
+      "Affichage du patrimoine actuel et des soldes sur la page Opérations",
+      "Dernières opérations réelles sur le tableau de bord",
+      "Tableau de bord compact et responsive",
+      "Fil d’Ariane sur les principales pages métier",
+    ],
+  },
+  {
     version: "0.2.0",
     date: "2026-08-08",
     title: "Comptes et patrimoine",
