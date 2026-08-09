@@ -10,6 +10,26 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.3.1",
+    date: "2026-08-09",
+    title: "Navigation et ergonomie",
+    summary: `${APP_NAME} propose une navigation privée repensée et une interface plus compacte, cohérente et responsive sur l’ensemble des pages métier.`,
+    changes: [
+      "Nouvelle sidebar de navigation sur desktop et tiroir adapté au mobile",
+      "Navigation contextuelle du dossier en cours",
+      "Accès direct à Comptes et patrimoine",
+      'Ajout de "Gérer les dossiers" pour consulter la liste et créer d’autres dossiers',
+      "Réorganisation du dossier : Comptes et patrimoine, Opérations, Exercices de gestion et Informations du dossier",
+      "Fil d’Ariane harmonisé et compacté",
+      "Densification générale de l’interface privée et harmonisation des titres",
+      "Cartes et formulaires plus compacts sur desktop et mobile",
+      "Harmonisation des pages Comptes, Opérations, Catégories, Exercices, Informations du dossier et Historique des versions",
+      "Journal des opérations, filtres et soldes actuels densifiés",
+      `Réouverture contrôlée d’un exercice clôturé avec un dialogue ${APP_NAME}`,
+      "Amélioration responsive générale",
+    ],
+  },
+  {
     version: "0.3.0",
     date: "2026-08-09",
     title: "Opérations financières",
