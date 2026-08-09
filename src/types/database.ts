@@ -11,6 +11,8 @@ type MeasureType =
 type ManagementPeriodStatus = "open" | "closed";
 export type FinancialAccountType = "checking" | "livret_a" | "ldds" | "csl" | "lep" | "pel" | "term_account" | "life_insurance" | "other_investment";
 type FinancialAccountStatus = "active" | "closed";
+export type CategoryUsage = "income" | "expense" | "both";
+export type TransactionType = "income" | "expense" | "transfer_in" | "transfer_out";
 
 export type Database = {
   public: {
@@ -97,9 +99,36 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["account_valuations"]["Insert"]>;
         Relationships: [{ foreignKeyName: "account_valuations_financial_account_id_fkey"; columns: ["financial_account_id"]; isOneToOne: false; referencedRelation: "financial_accounts"; referencedColumns: ["id"] }];
       };
+      platform_administrators: {
+        Row: { user_id: string; appointed_by: string | null; created_at: string };
+        Insert: { user_id: string; appointed_by?: string | null; created_at?: string };
+        Update: never;
+        Relationships: [];
+      };
+      categories: {
+        Row: { id: string; owner_id: string | null; name: string; usage: CategoryUsage; is_system: boolean; active: boolean; created_at: string; updated_at: string };
+        Insert: { id?: string; owner_id?: string | null; name: string; usage: CategoryUsage; is_system?: boolean; active?: boolean; created_at?: string; updated_at?: string };
+        Update: { name?: string; usage?: CategoryUsage; active?: boolean; updated_at?: string };
+        Relationships: [];
+      };
+      transfers: {
+        Row: { id: string; protected_person_id: string; source_account_id: string; destination_account_id: string; transfer_date: string; amount: number; label: string | null; comment: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; protected_person_id: string; source_account_id: string; destination_account_id: string; transfer_date: string; amount: number; label?: string | null; comment?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["transfers"]["Insert"]>;
+        Relationships: [];
+      };
+      transactions: {
+        Row: { id: string; financial_account_id: string; transaction_date: string; transaction_type: TransactionType; label: string; amount: number; category_id: string | null; transfer_id: string | null; proof_reference: string | null; comment: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; financial_account_id: string; transaction_date: string; transaction_type: TransactionType; label: string; amount: number; category_id?: string | null; transfer_id?: string | null; proof_reference?: string | null; comment?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["transactions"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      create_internal_transfer: { Args: { p_protected_person_id: string; p_source_account_id: string; p_destination_account_id: string; p_transfer_date: string; p_amount: number; p_label?: string | null; p_comment?: string | null }; Returns: string };
+      delete_internal_transfer: { Args: { p_transfer_id: string }; Returns: undefined };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
@@ -110,3 +139,6 @@ export type ProtectionMeasure = Database["public"]["Tables"]["protection_measure
 export type ManagementPeriod = Database["public"]["Tables"]["management_periods"]["Row"];
 export type FinancialAccount = Database["public"]["Tables"]["financial_accounts"]["Row"];
 export type AccountValuation = Database["public"]["Tables"]["account_valuations"]["Row"];
+export type Category = Database["public"]["Tables"]["categories"]["Row"];
+export type Transaction = Database["public"]["Tables"]["transactions"]["Row"];
+export type Transfer = Database["public"]["Tables"]["transfers"]["Row"];

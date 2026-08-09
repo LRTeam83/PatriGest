@@ -1,0 +1,42 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Plus } from "lucide-react";
+import { z } from "zod";
+import { PrivateShell } from "@/components/layout/private-shell";
+import { AppBreadcrumb } from "@/components/ui/app-breadcrumb";
+import { getCategories } from "@/domains/categories/services/category-service";
+import { getFinancialAccounts } from "@/domains/financial-accounts/services/financial-account-service";
+import { formatCurrency, getCurrentPatrimonyValue } from "@/domains/financial-accounts/utils/financial-account-utils";
+import { DossierNavigation } from "@/domains/protected-persons/components/dossier-navigation";
+import { getProtectedPerson } from "@/domains/protected-persons/services/protected-person-service";
+import { TransactionFilters } from "@/domains/transactions/components/transaction-filters";
+import { TransactionJournal } from "@/domains/transactions/components/transaction-journal";
+import { getTransactions } from "@/domains/transactions/services/transaction-service";
+
+export const metadata: Metadata = { title: "Opérations" };
+export const dynamic = "force-dynamic";
+type Search = Promise<Record<string, string | string[] | undefined>>;
+const one = (value: string | string[] | undefined) => typeof value === "string" ? value : undefined;
+const filterType = (value: string | undefined) => value === "income" || value === "expense" || value === "transfer" ? value : undefined;
+
+export default async function OperationsPage({ params, searchParams }: { params: Promise<{ protectedPersonId: string }>; searchParams: Search }) {
+  const { protectedPersonId } = await params;
+  if (!z.uuid().safeParse(protectedPersonId).success) notFound();
+  const search = await searchParams;
+  const person = await getProtectedPerson(protectedPersonId);
+  if (!person) notFound();
+  const [accounts, categories] = await Promise.all([getFinancialAccounts(protectedPersonId), getCategories(false)]);
+  const currentPatrimony = getCurrentPatrimonyValue(accounts);
+  const startDate = one(search.start);
+  const endDate = one(search.end);
+  const hasOpenPeriod = person.managementPeriods.some((period) => period.status === "open");
+  const items = await getTransactions(protectedPersonId, { startDate, endDate, accountId: one(search.account), type: filterType(one(search.type)), categoryId: one(search.category), query: one(search.q) });
+  return <PrivateShell current="dossiers">
+    <AppBreadcrumb items={[{ label: "Tableau de bord", href: "/tableau-de-bord" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}` }, { label: "Opérations" }]} />
+    <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.14em] text-[#2563EB]">{person.first_name} {person.last_name}</p><div className="mt-2 flex flex-wrap items-end gap-x-6 gap-y-2"><h1 className="text-3xl font-bold">Opérations</h1><div className="border-l-2 border-blue-100 pl-4"><p className="text-xs font-semibold text-[#64748B]">Patrimoine actuel</p><p className="text-lg font-bold">{formatCurrency(currentPatrimony)}</p></div></div></div>{hasOpenPeriod ? <Link href={`/dossiers/${protectedPersonId}/operations/nouvelle`} className="button button-primary gap-2"><Plus size={18} />Ajouter une opération</Link> : <div className="flex flex-col items-start gap-1 sm:items-end"><span className="button cursor-not-allowed gap-2 bg-slate-200 text-[#64748B]" aria-disabled="true"><Plus size={18} />Ajouter une opération</span><p className="text-xs font-semibold text-[#64748B]">Aucun exercice de gestion ouvert.</p></div>}</div>
+    <DossierNavigation protectedPersonId={protectedPersonId} current="operations" />
+    <TransactionFilters accounts={accounts} categories={categories} />
+    <TransactionJournal personId={protectedPersonId} items={items} periods={person.managementPeriods} />
+  </PrivateShell>;
+}

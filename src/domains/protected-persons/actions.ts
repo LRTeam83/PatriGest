@@ -8,8 +8,10 @@ import { protectedPersonSchema } from "./schemas/protected-person-schema";
 import { protectionMeasureSchema } from "./schemas/protection-measure-schema";
 import {
   createManagementPeriod,
+  closeManagementPeriod,
   createProtectedPerson,
   createProtectionMeasure,
+  updateManagementPeriod,
 } from "./services/protected-person-service";
 import type { ProtectedPersonActionState } from "./state";
 
@@ -73,8 +75,25 @@ export async function addManagementPeriodAction(
   try {
     await createManagementPeriod(protectedPersonId, parsed.data);
     revalidatePath(`/dossiers/${protectedPersonId}`);
+    revalidatePath(`/dossiers/${protectedPersonId}/exercices`);
     return { status: "success", message: "L’exercice de gestion a été créé." };
   } catch {
     return { status: "error", message: "Impossible de créer l’exercice. Vérifiez qu’il n’existe pas déjà." };
   }
+}
+
+export async function updateManagementPeriodAction(protectedPersonId: string, periodId: string, _state: ProtectedPersonActionState, formData: FormData): Promise<ProtectedPersonActionState> {
+  if (![protectedPersonId, periodId].every((id) => z.uuid().safeParse(id).success)) return { status: "error", message: "Exercice invalide." };
+  const parsed = managementPeriodSchema.safeParse({ startDate: formData.get("startDate"), endDate: formData.get("endDate") });
+  if (!parsed.success) return validationError(parsed.error);
+  try { await updateManagementPeriod(protectedPersonId, periodId, parsed.data); revalidatePath(`/dossiers/${protectedPersonId}`); revalidatePath(`/dossiers/${protectedPersonId}/exercices`); return { status: "success", message: "L’exercice a été modifié." }; }
+  catch { return { status: "error", message: "Impossible de modifier cet exercice." }; }
+}
+
+export async function closeManagementPeriodAction(protectedPersonId: string, periodId: string) {
+  if (![protectedPersonId, periodId].every((id) => z.uuid().safeParse(id).success)) return;
+  await closeManagementPeriod(protectedPersonId, periodId);
+  revalidatePath(`/dossiers/${protectedPersonId}`);
+  revalidatePath(`/dossiers/${protectedPersonId}/exercices`);
+  redirect(`/dossiers/${protectedPersonId}/exercices`);
 }

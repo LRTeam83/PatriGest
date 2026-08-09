@@ -1,10 +1,10 @@
-import type { AccountValuation, FinancialAccount } from "@/types/database";
+import type { AccountValuation, FinancialAccount, Transaction } from "@/types/database";
 import { getAuthenticatedUser } from "@/domains/protected-persons/services/authenticated-user";
 import type { FinancialAccountInput } from "../schemas/financial-account-schema";
 import type { AccountValuationInput } from "../schemas/account-valuation-schema";
 import { isValuationAccount } from "../utils/financial-account-utils";
 
-export type FinancialAccountWithValuations = FinancialAccount & { valuations: AccountValuation[] };
+export type FinancialAccountWithValuations = FinancialAccount & { valuations: AccountValuation[]; transactions: Transaction[] };
 
 async function requireOwnedPerson(protectedPersonId: string) {
   const auth = await getAuthenticatedUser();
@@ -27,17 +27,19 @@ export async function getFinancialAccounts(protectedPersonId: string): Promise<F
   const { data: accounts, error } = await supabase.from("financial_accounts").select("*").eq("protected_person_id", protectedPersonId).order("created_at", { ascending: false });
   if (error) throw new Error("Impossible de charger les comptes.");
   if (accounts.length === 0) return [];
-  const { data: valuations, error: valuationsError } = await supabase.from("account_valuations").select("*").in("financial_account_id", accounts.map((account) => account.id)).order("valuation_date", { ascending: false });
+  const accountIds = accounts.map((account) => account.id);
+  const [{ data: valuations, error: valuationsError }, { data: transactions, error: transactionsError }] = await Promise.all([supabase.from("account_valuations").select("*").in("financial_account_id", accountIds).order("valuation_date", { ascending: false }), supabase.from("transactions").select("*").in("financial_account_id", accountIds).order("transaction_date", { ascending: false })]);
   if (valuationsError) throw new Error("Impossible de charger les valorisations.");
-  return accounts.map((account) => ({ ...account, valuations: valuations.filter((valuation) => valuation.financial_account_id === account.id) }));
+  if (transactionsError) throw new Error("Impossible de charger les opérations.");
+  return accounts.map((account) => ({ ...account, valuations: valuations.filter((valuation) => valuation.financial_account_id === account.id), transactions: transactions.filter((transaction) => transaction.financial_account_id === account.id) }));
 }
 
 export async function getFinancialAccount(accountId: string): Promise<FinancialAccountWithValuations | null> {
   try {
     const { supabase, account } = await requireOwnedAccount(accountId);
-    const { data: valuations, error } = await supabase.from("account_valuations").select("*").eq("financial_account_id", accountId).order("valuation_date", { ascending: false });
-    if (error) throw new Error("Impossible de charger les valorisations.");
-    return { ...account, valuations };
+    const [{ data: valuations, error }, { data: transactions, error: transactionsError }] = await Promise.all([supabase.from("account_valuations").select("*").eq("financial_account_id", accountId).order("valuation_date", { ascending: false }), supabase.from("transactions").select("*").eq("financial_account_id", accountId).order("transaction_date", { ascending: false }).order("created_at", { ascending: false })]);
+    if (error || transactionsError) throw new Error("Impossible de charger les données du compte.");
+    return { ...account, valuations, transactions };
   } catch (error) {
     if (error instanceof Error && error.message === "Compte introuvable.") return null;
     throw error;

@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { FolderOpen, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react";
+import { FolderOpen, LayoutDashboard, LogOut, Settings, ShieldCheck } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/actions";
 import { ReleaseNotice } from "@/components/releases/release-notice";
 import { getAuthenticatedUser } from "@/domains/protected-persons/services/authenticated-user";
 import { APP_NAME, APP_VERSION } from "@/lib/app";
 import { LATEST_RELEASE } from "@/lib/releases";
 
-export async function PrivateShell({ children, current }: { children: React.ReactNode; current: "dashboard" | "dossiers" }) {
+export async function PrivateShell({ children, current }: { children: React.ReactNode; current: "dashboard" | "dossiers" | "settings" }) {
   const { supabase, userId } = await getAuthenticatedUser();
   const { data: profile, error } = await supabase
     .from("profiles")
@@ -29,6 +29,7 @@ export async function PrivateShell({ children, current }: { children: React.Reac
           <nav className="order-3 flex w-full items-center gap-2 sm:order-2 sm:w-auto" aria-label="Navigation privée">
             <PrivateLink href="/tableau-de-bord" active={current === "dashboard"} icon={LayoutDashboard}>Tableau de bord</PrivateLink>
             <PrivateLink href="/dossiers" active={current === "dossiers"} icon={FolderOpen}>Dossiers</PrivateLink>
+            <PrivateLink href="/parametres/categories" active={current === "settings"} icon={Settings}>Paramètres</PrivateLink>
           </nav>
           <form className="order-2 sm:order-3" action={logoutAction}>
             <button className="button button-secondary gap-2 px-3 sm:px-5" type="submit"><LogOut aria-hidden="true" size={17} /><span className="hidden sm:inline">Déconnexion</span></button>

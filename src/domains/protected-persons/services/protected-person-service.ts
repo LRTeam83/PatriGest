@@ -119,3 +119,20 @@ export async function createManagementPeriod(protectedPersonId: string, input: M
   if (error) throw new Error("Impossible de créer l’exercice.");
   return data;
 }
+
+export async function updateManagementPeriod(protectedPersonId: string, periodId: string, input: ManagementPeriodInput) {
+  const { supabase, userId } = await getAuthenticatedUser();
+  const { data: person } = await supabase.from("protected_persons").select("id").eq("id", protectedPersonId).eq("owner_id", userId).maybeSingle();
+  if (!person) throw new Error("Dossier introuvable.");
+  const { data, error } = await supabase.from("management_periods").update({ start_date: input.startDate, end_date: input.endDate }).eq("id", periodId).eq("protected_person_id", protectedPersonId).eq("status", "open").select("*").maybeSingle();
+  if (error || !data) throw new Error("Exercice ouvert introuvable.");
+  return data;
+}
+
+export async function closeManagementPeriod(protectedPersonId: string, periodId: string) {
+  const { supabase, userId } = await getAuthenticatedUser();
+  const { data: person } = await supabase.from("protected_persons").select("id").eq("id", protectedPersonId).eq("owner_id", userId).maybeSingle();
+  if (!person) throw new Error("Dossier introuvable.");
+  const { data, error } = await supabase.from("management_periods").update({ status: "closed", closed_at: new Date().toISOString() }).eq("id", periodId).eq("protected_person_id", protectedPersonId).eq("status", "open").select("id").maybeSingle();
+  if (error || !data) throw new Error("Exercice ouvert introuvable.");
+}
