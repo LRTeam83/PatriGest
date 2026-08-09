@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, CalendarDays, FolderOpen, Landmark, WalletCards } from "lucide-react";
 import { PrivateShell } from "@/components/layout/private-shell";
+import { AdministrationDashboard } from "@/domains/administration/components/administration-dashboard";
+import { getPrivateAccessContext } from "@/domains/administration/services/private-access-context";
 import { getDashboardData, type DashboardTransaction } from "@/domains/dashboard/services/dashboard-service";
 import { formatCurrency, formatFinancialDate } from "@/domains/financial-accounts/utils/financial-account-utils";
 import { transactionTypeLabels } from "@/domains/transactions/utils/transaction-utils";
@@ -10,6 +12,8 @@ export const metadata: Metadata = { title: "Tableau de bord" };
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const { isPlatformAdmin } = await getPrivateAccessContext();
+  if (isPlatformAdmin) return <PrivateShell current="dashboard"><AdministrationDashboard /></PrivateShell>;
   const data = await getDashboardData();
   const nextPeriod = data.upcomingPeriods[0];
   return <PrivateShell current="dashboard">

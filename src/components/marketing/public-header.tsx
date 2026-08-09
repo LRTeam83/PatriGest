@@ -18,7 +18,7 @@ export function PublicHeader() {
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
           <Link className="button button-secondary mobile-hide" href="/connexion">Se connecter</Link>
-          <Link className="button button-primary whitespace-nowrap px-4 sm:px-5" href="/inscription">Créer un compte</Link>
+          <Link className="button button-primary whitespace-nowrap px-4 sm:px-5" href="/demande-acces">Créer un compte</Link>
         </div>
       </div>
     </header>

@@ -23,7 +23,7 @@ export default async function EditOperationPage({ params }: { params: Promise<{ 
   if (!person) notFound();
   const [accounts, categories, transaction] = await Promise.all([getFinancialAccounts(protectedPersonId), getCategories(false), getTransaction(transactionId)]);
   if (!transaction || transaction.transfer_id || transaction.account.protected_person_id !== protectedPersonId) notFound();
-  const closed = isDateInClosedPeriod(transaction.transaction_date, person.managementPeriods);
+  const closed = person.accessRole === "read_only" || isDateInClosedPeriod(transaction.transaction_date, person.managementPeriods);
   return <PrivateShell current="dossiers" dossier={{ id: protectedPersonId, name: `${person.first_name} ${person.last_name}`, current: "operations" }}>
     <AppBreadcrumb items={[{ label: "Dossiers", href: "/dossiers" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}/comptes` }, { label: "Opérations", href: `/dossiers/${protectedPersonId}/operations` }, { label: "Modifier" }]} />
     <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#2563EB]">{person.first_name} {person.last_name}</p>

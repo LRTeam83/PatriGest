@@ -1,4 +1,4 @@
-import type { ManagementPeriod, ProtectedPerson, ProtectionMeasure } from "@/types/database";
+import type { DossierAccessRole, ManagementPeriod, ProtectedPerson, ProtectionMeasure } from "@/types/database";
 import type { ProtectedPersonInput } from "../schemas/protected-person-schema";
 import type { ManagementPeriodInput } from "../schemas/management-period-schema";
 import type { ProtectionMeasureInput } from "../schemas/protection-measure-schema";
@@ -7,18 +7,22 @@ import { getAuthenticatedUser } from "./authenticated-user";
 export type ProtectedPersonDetail = ProtectedPerson & {
   protectionMeasures: ProtectionMeasure[];
   managementPeriods: ManagementPeriod[];
+  accessRole: DossierAccessRole;
 };
+export type ProtectedPersonListItem = ProtectedPerson & { accessRole: DossierAccessRole };
 
 export async function getProtectedPersons() {
   const { supabase, userId } = await getAuthenticatedUser();
   const { data, error } = await supabase
     .from("protected_persons")
     .select("*")
-    .eq("owner_id", userId)
     .order("updated_at", { ascending: false });
 
   if (error) throw new Error("Impossible de charger les dossiers.");
-  return data;
+  const { data: sharedAccess, error: accessError } = await supabase.from("protected_person_access").select("protected_person_id,role").eq("user_id", userId);
+  if (accessError) throw new Error("Impossible de charger les droits des dossiers.");
+  const roles = new Map(sharedAccess.map((access) => [access.protected_person_id, access.role]));
+  return data.map((person) => ({ ...person, accessRole: person.owner_id === userId ? "owner" as const : roles.get(person.id) ?? "read_only" as const }));
 }
 
 export async function getProtectedPerson(id: string): Promise<ProtectedPersonDetail | null> {
@@ -27,7 +31,6 @@ export async function getProtectedPerson(id: string): Promise<ProtectedPersonDet
     .from("protected_persons")
     .select("*")
     .eq("id", id)
-    .eq("owner_id", userId)
     .maybeSingle();
 
   if (error) throw new Error("Impossible de charger le dossier.");
@@ -40,11 +43,14 @@ export async function getProtectedPerson(id: string): Promise<ProtectedPersonDet
 
   if (measuresResult.error || periodsResult.error) throw new Error("Impossible de charger les informations du dossier.");
 
-  return { ...person, protectionMeasures: measuresResult.data, managementPeriods: periodsResult.data };
+  const { data: access } = person.owner_id === userId ? { data: null } : await supabase.from("protected_person_access").select("role").eq("protected_person_id", id).eq("user_id", userId).maybeSingle();
+  return { ...person, protectionMeasures: measuresResult.data, managementPeriods: periodsResult.data, accessRole: person.owner_id === userId ? "owner" : access?.role ?? "read_only" };
 }
 
 export async function createProtectedPerson(input: ProtectedPersonInput) {
   const { supabase, userId } = await getAuthenticatedUser();
+  const { data: administrator } = await supabase.from("platform_administrators").select("user_id").eq("user_id", userId).maybeSingle();
+  if (administrator) throw new Error("Un administrateur de plateforme ne peut pas créer de dossier.");
   const { data, error } = await supabase
     .from("protected_persons")
     .insert({
@@ -66,7 +72,7 @@ export async function createProtectedPerson(input: ProtectedPersonInput) {
 }
 
 export async function updateProtectedPerson(id: string, input: ProtectedPersonInput) {
-  const { supabase, userId } = await getAuthenticatedUser();
+  const { supabase } = await getAuthenticatedUser();
   const { data, error } = await supabase
     .from("protected_persons")
     .update({
@@ -80,7 +86,6 @@ export async function updateProtectedPerson(id: string, input: ProtectedPersonIn
       city: input.city,
     })
     .eq("id", id)
-    .eq("owner_id", userId)
     .select("*")
     .single();
 
@@ -89,8 +94,8 @@ export async function updateProtectedPerson(id: string, input: ProtectedPersonIn
 }
 
 export async function createProtectionMeasure(protectedPersonId: string, input: ProtectionMeasureInput) {
-  const { supabase, userId } = await getAuthenticatedUser();
-  const { data: person } = await supabase.from("protected_persons").select("id").eq("id", protectedPersonId).eq("owner_id", userId).maybeSingle();
+  const { supabase } = await getAuthenticatedUser();
+  const { data: person } = await supabase.from("protected_persons").select("id").eq("id", protectedPersonId).maybeSingle();
   if (!person) throw new Error("Dossier introuvable.");
 
   const { data, error } = await supabase.from("protection_measures").insert({
@@ -106,8 +111,8 @@ export async function createProtectionMeasure(protectedPersonId: string, input: 
 }
 
 export async function createManagementPeriod(protectedPersonId: string, input: ManagementPeriodInput) {
-  const { supabase, userId } = await getAuthenticatedUser();
-  const { data: person } = await supabase.from("protected_persons").select("id").eq("id", protectedPersonId).eq("owner_id", userId).maybeSingle();
+  const { supabase } = await getAuthenticatedUser();
+  const { data: person } = await supabase.from("protected_persons").select("id").eq("id", protectedPersonId).maybeSingle();
   if (!person) throw new Error("Dossier introuvable.");
 
   const { data, error } = await supabase.from("management_periods").insert({
@@ -121,8 +126,8 @@ export async function createManagementPeriod(protectedPersonId: string, input: M
 }
 
 export async function updateManagementPeriod(protectedPersonId: string, periodId: string, input: ManagementPeriodInput) {
-  const { supabase, userId } = await getAuthenticatedUser();
-  const { data: person } = await supabase.from("protected_persons").select("id").eq("id", protectedPersonId).eq("owner_id", userId).maybeSingle();
+  const { supabase } = await getAuthenticatedUser();
+  const { data: person } = await supabase.from("protected_persons").select("id").eq("id", protectedPersonId).maybeSingle();
   if (!person) throw new Error("Dossier introuvable.");
   const { data, error } = await supabase.from("management_periods").update({ start_date: input.startDate, end_date: input.endDate }).eq("id", periodId).eq("protected_person_id", protectedPersonId).eq("status", "open").select("*").maybeSingle();
   if (error || !data) throw new Error("Exercice ouvert introuvable.");
@@ -130,16 +135,16 @@ export async function updateManagementPeriod(protectedPersonId: string, periodId
 }
 
 export async function closeManagementPeriod(protectedPersonId: string, periodId: string) {
-  const { supabase, userId } = await getAuthenticatedUser();
-  const { data: person } = await supabase.from("protected_persons").select("id").eq("id", protectedPersonId).eq("owner_id", userId).maybeSingle();
+  const { supabase } = await getAuthenticatedUser();
+  const { data: person } = await supabase.from("protected_persons").select("id").eq("id", protectedPersonId).maybeSingle();
   if (!person) throw new Error("Dossier introuvable.");
   const { data, error } = await supabase.from("management_periods").update({ status: "closed", closed_at: new Date().toISOString() }).eq("id", periodId).eq("protected_person_id", protectedPersonId).eq("status", "open").select("id").maybeSingle();
   if (error || !data) throw new Error("Exercice ouvert introuvable.");
 }
 
 export async function reopenManagementPeriod(protectedPersonId: string, periodId: string) {
-  const { supabase, userId } = await getAuthenticatedUser();
-  const { data: person } = await supabase.from("protected_persons").select("id").eq("id", protectedPersonId).eq("owner_id", userId).maybeSingle();
+  const { supabase } = await getAuthenticatedUser();
+  const { data: person } = await supabase.from("protected_persons").select("id").eq("id", protectedPersonId).maybeSingle();
   if (!person) throw new Error("Dossier introuvable.");
 
   const { data: period, error: periodError } = await supabase.from("management_periods").select("id").eq("id", periodId).eq("protected_person_id", protectedPersonId).eq("status", "closed").maybeSingle();

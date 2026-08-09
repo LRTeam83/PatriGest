@@ -15,7 +15,7 @@ export default async function EditFinancialAccountPage({ params }: { params: Pro
   const { protectedPersonId, accountId } = await params;
   if (![protectedPersonId, accountId].every((id) => z.uuid().safeParse(id).success)) notFound();
   const [person, account] = await Promise.all([getProtectedPerson(protectedPersonId), getFinancialAccount(accountId)]);
-  if (!person || !account || account.protected_person_id !== protectedPersonId) notFound();
+  if (!person || person.accessRole === "read_only" || !account || account.protected_person_id !== protectedPersonId) notFound();
   return <PrivateShell current="dossiers" dossier={{ id: protectedPersonId, name: `${person.first_name} ${person.last_name}`, current: "accounts" }}>
     <AppBreadcrumb items={[{ label: "Dossiers", href: "/dossiers" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}/comptes` }, { label: "Comptes et patrimoine", href: `/dossiers/${protectedPersonId}/comptes` }, { label: account.account_name, href: `/dossiers/${protectedPersonId}/comptes/${accountId}` }, { label: "Modifier" }]} />
     <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#2563EB]">{person.first_name} {person.last_name}</p>

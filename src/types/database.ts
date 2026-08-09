@@ -13,6 +13,9 @@ export type FinancialAccountType = "checking" | "livret_a" | "ldds" | "csl" | "l
 type FinancialAccountStatus = "active" | "closed";
 export type CategoryUsage = "income" | "expense" | "both";
 export type TransactionType = "income" | "expense" | "transfer_in" | "transfer_out";
+export type DossierAccessRole = "owner" | "manager" | "read_only";
+type SharedAccessRole = Exclude<DossierAccessRole, "owner">;
+type AccountRequestStatus = "pending" | "approved" | "rejected";
 
 export type Database = {
   public: {
@@ -105,6 +108,24 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      account_requests: {
+        Row: { id: string; email: string; first_name: string; last_name: string; message: string | null; status: AccountRequestStatus; invitation_token_hash: string | null; invitation_expires_at: string | null; invitation_used_at: string | null; created_at: string; reviewed_at: string | null; reviewed_by: string | null };
+        Insert: { id?: string; email: string; first_name: string; last_name: string; message?: string | null; status?: AccountRequestStatus; invitation_token_hash?: string | null; invitation_expires_at?: string | null; invitation_used_at?: string | null; created_at?: string; reviewed_at?: string | null; reviewed_by?: string | null };
+        Update: Partial<Database["public"]["Tables"]["account_requests"]["Insert"]>;
+        Relationships: [];
+      };
+      protected_person_access: {
+        Row: { id: string; protected_person_id: string; user_id: string; role: SharedAccessRole; invited_by: string; created_at: string; updated_at: string };
+        Insert: { id?: string; protected_person_id: string; user_id: string; role: SharedAccessRole; invited_by: string; created_at?: string; updated_at?: string };
+        Update: { role?: SharedAccessRole; updated_at?: string };
+        Relationships: [];
+      };
+      protected_person_invitations: {
+        Row: { id: string; protected_person_id: string; email: string; role: SharedAccessRole; token_hash: string; expires_at: string; accepted_at: string | null; invited_by: string; created_at: string };
+        Insert: { id?: string; protected_person_id: string; email: string; role: SharedAccessRole; token_hash: string; expires_at: string; accepted_at?: string | null; invited_by: string; created_at?: string };
+        Update: { role?: SharedAccessRole; expires_at?: string; accepted_at?: string | null };
+        Relationships: [];
+      };
       categories: {
         Row: { id: string; owner_id: string | null; name: string; usage: CategoryUsage; is_system: boolean; active: boolean; created_at: string; updated_at: string };
         Insert: { id?: string; owner_id?: string | null; name: string; usage: CategoryUsage; is_system?: boolean; active?: boolean; created_at?: string; updated_at?: string };
@@ -126,6 +147,11 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      is_platform_admin: { Args: Record<string, never>; Returns: boolean };
+      is_protected_person_owner: { Args: { person_id: string }; Returns: boolean };
+      can_read_protected_person: { Args: { person_id: string }; Returns: boolean };
+      can_manage_protected_person: { Args: { person_id: string }; Returns: boolean };
+      accept_protected_person_invitation: { Args: { p_token_hash: string }; Returns: string };
       create_internal_transfer: { Args: { p_protected_person_id: string; p_source_account_id: string; p_destination_account_id: string; p_transfer_date: string; p_amount: number; p_label?: string | null; p_comment?: string | null }; Returns: string };
       delete_internal_transfer: { Args: { p_transfer_id: string }; Returns: undefined };
     };
@@ -142,3 +168,6 @@ export type AccountValuation = Database["public"]["Tables"]["account_valuations"
 export type Category = Database["public"]["Tables"]["categories"]["Row"];
 export type Transaction = Database["public"]["Tables"]["transactions"]["Row"];
 export type Transfer = Database["public"]["Tables"]["transfers"]["Row"];
+export type AccountRequest = Database["public"]["Tables"]["account_requests"]["Row"];
+export type ProtectedPersonAccess = Database["public"]["Tables"]["protected_person_access"]["Row"];
+export type ProtectedPersonInvitation = Database["public"]["Tables"]["protected_person_invitations"]["Row"];

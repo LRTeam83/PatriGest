@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { FolderOpen, Plus, UserRound } from "lucide-react";
-import type { ProtectedPerson } from "@/types/database";
+import type { ProtectedPersonListItem } from "../services/protected-person-service";
 
-export function ProtectedPersonList({ persons }: { persons: ProtectedPerson[] }) {
+export function ProtectedPersonList({ persons }: { persons: ProtectedPersonListItem[] }) {
   return <>
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-[#2563EB]">Personnes protégées</p><h1 className="mt-1 font-bold tracking-tight">Dossiers</h1><p className="mt-1 text-sm text-[#64748B]">Retrouvez et gérez les dossiers qui vous sont confiés.</p></div>
@@ -17,6 +17,7 @@ export function ProtectedPersonList({ persons }: { persons: ProtectedPerson[] })
       <div className="flex items-start justify-between gap-3"><div className="flex size-8 items-center justify-center rounded-lg bg-blue-50 text-[#2563EB]"><UserRound aria-hidden="true" size={16} /></div><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${person.status === "active" ? "bg-green-50 text-[#16A34A]" : "bg-slate-100 text-[#64748B]"}`}>{person.status === "active" ? "Actif" : "Archivé"}</span></div>
       <h2 className="mt-2.5 text-sm font-bold group-hover:text-[#2563EB]">{person.first_name} {person.last_name}</h2>
       <p className="mt-0.5 text-xs text-[#64748B]">{person.city || "Commune non renseignée"}</p>
+      <p className="mt-2 text-[11px] font-semibold text-[#64748B]">{person.accessRole === "owner" ? "Propriétaire" : person.accessRole === "manager" ? "Gestionnaire" : "Lecture seule"}</p>
     </Link>)}</div>}
   </>;
 }

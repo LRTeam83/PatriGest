@@ -10,6 +10,28 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.3.2",
+    date: "2026-08-10",
+    title: "Accès multi-utilisateur et administration",
+    summary: `${APP_NAME} permet désormais de gérer les demandes d’accès, les comptes utilisateurs et le partage sécurisé d’un dossier avec des collaborateurs en gestion ou en lecture seule.`,
+    changes: [
+      "Demande publique d’ouverture de compte",
+      "Validation des demandes par le super administrateur",
+      "Tableau de bord d’administration dédié",
+      "Séparation stricte entre administrateur de plateforme et utilisateur métier",
+      "Inscription uniquement après validation ou invitation",
+      "Liens d’inscription sécurisés, expirables et régénérables",
+      "Gestion des utilisateurs",
+      "Invitation d’un collaborateur sur un dossier précis",
+      "Rôles Gestionnaire et Lecture seule",
+      "Gestion des accès au dossier et retrait immédiat d’un collaborateur",
+      "Isolation complète des dossiers entre utilisateurs",
+      "Protection RLS adaptée au multi-utilisateur",
+      "Accès partagé aux comptes, opérations, valorisations et exercices selon le rôle",
+      "Protection des données financières contre l’accès de l’administrateur de plateforme",
+    ],
+  },
+  {
     version: "0.3.1",
     date: "2026-08-09",
     title: "Navigation et ergonomie",

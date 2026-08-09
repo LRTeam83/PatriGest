@@ -6,9 +6,11 @@ import { getAuthErrorMessage } from "@/lib/auth/errors";
 import {
   getApplicationOrigin,
   getPasswordRecoveryRedirectUrl,
+  getSafeNextPath,
 } from "@/lib/auth/redirects";
 import type { AuthActionState } from "@/lib/auth/state";
 import { createClient } from "@/lib/supabase/server";
+import { markSignupInvitationUsed, validateSignupInvitation } from "@/domains/access/actions";
 
 const emailSchema = z.email("Saisissez une adresse email valide.").trim();
 const passwordSchema = z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères.").max(72, "Le mot de passe ne peut pas dépasser 72 caractères.");
@@ -45,10 +47,14 @@ export async function loginAction(_state: AuthActionState, formData: FormData): 
   if (error) {
     return { status: "error", message: getAuthErrorMessage(error, "Connexion impossible. Vérifiez vos informations et réessayez.") };
   }
-  redirect("/tableau-de-bord");
+  redirect(getSafeNextPath(typeof formData.get("next") === "string" ? String(formData.get("next")) : null, "/tableau-de-bord"));
 }
 
 export async function signupAction(_state: AuthActionState, formData: FormData): Promise<AuthActionState> {
+  const invitationToken = z.string().min(32).safeParse(formData.get("invitationToken"));
+  if (!invitationToken.success) return { status: "error", message: "Cette invitation est invalide ou a expiré." };
+  const invitation = await validateSignupInvitation(invitationToken.data);
+  if (!invitation) return { status: "error", message: "Cette invitation est invalide ou a expiré." };
   const parsed = signupSchema.safeParse({
     email: formData.get("email"),
     firstName: formData.get("firstName"),
@@ -57,6 +63,7 @@ export async function signupAction(_state: AuthActionState, formData: FormData):
     passwordConfirmation: formData.get("passwordConfirmation"),
   });
   if (!parsed.success) return validationError(parsed.error);
+  if (parsed.data.email.toLowerCase() !== invitation.email.toLowerCase()) return { status: "error", message: "Utilisez l’adresse email associée à cette invitation." };
 
   const origin = await getApplicationOrigin();
   const supabase = await createClient();
@@ -64,13 +71,14 @@ export async function signupAction(_state: AuthActionState, formData: FormData):
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      emailRedirectTo: `${origin}/auth/callback`,
+      emailRedirectTo: `${origin}/auth/callback${invitation.kind === "dossier" ? `?next=${encodeURIComponent(`/invitation/${invitationToken.data}`)}` : ""}`,
       data: { first_name: parsed.data.firstName, last_name: parsed.data.lastName },
     },
   });
   if (error) {
     return { status: "error", message: getAuthErrorMessage(error, "Impossible de créer le compte. Réessayez dans quelques instants.") };
   }
+  if (invitation.kind === "account") await markSignupInvitationUsed(invitationToken.data);
   return { status: "success", message: "Votre compte a été créé. Consultez votre messagerie et confirmez votre adresse email avant de vous connecter." };
 }
 

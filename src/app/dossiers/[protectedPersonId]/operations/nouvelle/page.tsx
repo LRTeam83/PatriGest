@@ -16,7 +16,7 @@ export default async function NewOperationPage({ params }: { params: Promise<{ p
   const { protectedPersonId } = await params;
   if (!z.uuid().safeParse(protectedPersonId).success) notFound();
   const person = await getProtectedPerson(protectedPersonId);
-  if (!person) notFound();
+  if (!person || person.accessRole === "read_only") notFound();
   const [accounts, categories] = await Promise.all([getFinancialAccounts(protectedPersonId), getCategories(false)]);
   return <PrivateShell current="dossiers" dossier={{ id: protectedPersonId, name: `${person.first_name} ${person.last_name}`, current: "operations" }}>
     <AppBreadcrumb items={[{ label: "Dossiers", href: "/dossiers" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}/comptes` }, { label: "Opérations", href: `/dossiers/${protectedPersonId}/operations` }, { label: "Nouvelle opération" }]} />

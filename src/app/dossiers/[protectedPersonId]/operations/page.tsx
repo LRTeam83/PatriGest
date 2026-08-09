@@ -30,13 +30,13 @@ export default async function OperationsPage({ params, searchParams }: { params:
   const currentPatrimony = getCurrentPatrimonyValue(accounts);
   const startDate = one(search.start);
   const endDate = one(search.end);
-  const hasOpenPeriod = person.managementPeriods.some((period) => period.status === "open");
+  const hasOpenPeriod = person.accessRole !== "read_only" && person.managementPeriods.some((period) => period.status === "open");
   const items = await getTransactions(protectedPersonId, { startDate, endDate, accountId: one(search.account), type: filterType(one(search.type)), categoryId: one(search.category), query: one(search.q) });
   return <PrivateShell current="dossiers" dossier={{ id: protectedPersonId, name: `${person.first_name} ${person.last_name}`, current: "operations" }}>
     <AppBreadcrumb items={[{ label: "Dossiers", href: "/dossiers" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}/comptes` }, { label: "Opérations" }]} />
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-[#2563EB]">{person.first_name} {person.last_name}</p><div className="mt-1 flex flex-wrap items-end gap-x-4 gap-y-1"><h1 className="text-2xl font-bold sm:text-[28px] sm:leading-8">Opérations</h1><div className="border-l border-blue-100 pl-3"><p className="text-[10px] font-semibold leading-4 text-[#64748B]">Patrimoine actuel</p><p className="text-base font-bold leading-5">{formatCurrency(currentPatrimony)}</p></div></div></div>{hasOpenPeriod ? <Link href={`/dossiers/${protectedPersonId}/operations/nouvelle`} className="button button-primary min-h-9 gap-2 px-4 text-xs"><Plus size={16} />Ajouter une opération</Link> : <div className="flex flex-col items-start gap-1 sm:items-end"><span className="button min-h-9 cursor-not-allowed gap-2 bg-slate-200 px-4 text-xs text-[#64748B]" aria-disabled="true"><Plus size={16} />Ajouter une opération</span><p className="text-[11px] font-semibold text-[#64748B]">Aucun exercice de gestion ouvert.</p></div>}</div>
     <DossierNavigation protectedPersonId={protectedPersonId} current="operations" />
     <TransactionFilters accounts={accounts} categories={categories} />
-    <TransactionJournal personId={protectedPersonId} items={items} periods={person.managementPeriods} />
+    <TransactionJournal personId={protectedPersonId} items={items} periods={person.accessRole === "read_only" ? [{ id: "read-only", protected_person_id: protectedPersonId, start_date: "0001-01-01", end_date: "9999-12-31", status: "closed", notes: null, created_at: "", updated_at: "", closed_at: null }] : person.managementPeriods} />
   </PrivateShell>;
 }

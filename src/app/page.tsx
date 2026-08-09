@@ -54,7 +54,7 @@ export default function Home() {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <a className="button button-secondary" href="/connexion">Se connecter</a>
-                <a className="button button-primary" href="/inscription">Créer un compte</a>
+                <a className="button button-primary" href="/demande-acces">Créer un compte</a>
               </div>
               <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium text-[#64748B]" aria-label="Avantages">
                 {["Simple", "Sécurisé", "Confidentiel"].map((item) => (

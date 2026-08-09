@@ -11,7 +11,7 @@ export async function getDashboardData() {
   const { supabase, userId } = await getAuthenticatedUser();
   const [{ data: profile, error: profileError }, { data: persons, error: personsError }] = await Promise.all([
     supabase.from("profiles").select("first_name").eq("id", userId).maybeSingle(),
-    supabase.from("protected_persons").select("*").eq("owner_id", userId).order("updated_at", { ascending: false }),
+    supabase.from("protected_persons").select("*").order("updated_at", { ascending: false }),
   ]);
   if (profileError || personsError) throw new Error("Impossible de charger le tableau de bord.");
 

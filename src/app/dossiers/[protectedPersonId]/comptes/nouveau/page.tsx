@@ -14,7 +14,7 @@ export default async function NewFinancialAccountPage({ params }: { params: Prom
   const { protectedPersonId } = await params;
   if (!z.uuid().safeParse(protectedPersonId).success) notFound();
   const person = await getProtectedPerson(protectedPersonId);
-  if (!person) notFound();
+  if (!person || person.accessRole === "read_only") notFound();
   return <PrivateShell current="dossiers" dossier={{ id: protectedPersonId, name: `${person.first_name} ${person.last_name}`, current: "accounts" }}>
     <AppBreadcrumb items={[{ label: "Dossiers", href: "/dossiers" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}/comptes` }, { label: "Comptes et patrimoine", href: `/dossiers/${protectedPersonId}/comptes` }, { label: "Nouveau compte" }]} />
     <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#2563EB]">{person.first_name} {person.last_name}</p>

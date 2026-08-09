@@ -2,21 +2,25 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeftRight, CalendarRange, FolderCog, FolderOpen, History, LayoutDashboard, LayoutGrid, LogOut, Menu, Settings, ShieldCheck, WalletCards, X, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, CalendarRange, FolderCog, FolderOpen, History, LayoutDashboard, LayoutGrid, LogOut, Menu, Settings, ShieldCheck, Users, WalletCards, X, type LucideIcon } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/actions";
 import { APP_NAME, APP_VERSION } from "@/lib/app";
 
-export type PrivateSection = "dashboard" | "dossiers" | "dossier-management" | "settings";
-export type DossierSection = "overview" | "accounts" | "operations" | "periods";
-export type PrivateDossierContext = { id: string; name: string; current: DossierSection };
+export type PrivateSection = "dashboard" | "dossiers" | "dossier-management" | "settings" | "administration" | "administration-requests" | "administration-users";
+export type DossierSection = "overview" | "accounts" | "operations" | "periods" | "access";
+export type PrivateDossierContext = { id: string; name: string; current: DossierSection; accessRole?: "owner" | "manager" | "read_only" };
 type NavigationItem = { label: string; href: string; icon: LucideIcon; active: boolean };
 
-export function PrivateNavigation({ current, dossier }: { current: PrivateSection; dossier?: PrivateDossierContext }) {
+export function PrivateNavigation({ current, dossier, isPlatformAdmin = false }: { current: PrivateSection; dossier?: PrivateDossierContext; isPlatformAdmin?: boolean }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
-  const principal: NavigationItem[] = [
+  const principal: NavigationItem[] = isPlatformAdmin ? [
+    { label: "Tableau de bord", href: "/tableau-de-bord", icon: LayoutDashboard, active: current === "dashboard" || current === "administration" },
+    { label: "Demandes d’accès", href: "/administration/demandes", icon: ShieldCheck, active: current === "administration-requests" },
+    { label: "Utilisateurs", href: "/administration/utilisateurs", icon: Users, active: current === "administration-users" },
+  ] : [
     { label: "Tableau de bord", href: "/tableau-de-bord", icon: LayoutDashboard, active: current === "dashboard" },
     { label: "Dossiers", href: "/dossiers", icon: FolderOpen, active: current === "dossiers" && !dossier },
     { label: "Gérer les dossiers", href: "/dossiers/gestion", icon: FolderCog, active: current === "dossier-management" },
@@ -26,8 +30,9 @@ export function PrivateNavigation({ current, dossier }: { current: PrivateSectio
     { label: "Opérations", href: `/dossiers/${dossier.id}/operations`, icon: ArrowLeftRight, active: dossier.current === "operations" },
     { label: "Exercices de gestion", href: `/dossiers/${dossier.id}/exercices`, icon: CalendarRange, active: dossier.current === "periods" },
     { label: "Informations du dossier", href: `/dossiers/${dossier.id}`, icon: LayoutGrid, active: dossier.current === "overview" },
+    ...(dossier.accessRole === "owner" ? [{ label: "Accès au dossier", href: `/dossiers/${dossier.id}/acces`, icon: Users, active: dossier.current === "access" }] : []),
   ] : [];
-  const settings: NavigationItem[] = [{ label: "Catégories", href: "/parametres/categories", icon: Settings, active: current === "settings" }];
+  const settings: NavigationItem[] = isPlatformAdmin ? [] : [{ label: "Catégories", href: "/parametres/categories", icon: Settings, active: current === "settings" }];
 
   useEffect(() => {
     if (!open) return;
@@ -48,7 +53,7 @@ export function PrivateNavigation({ current, dossier }: { current: PrivateSectio
     return () => { document.body.style.overflow = previousOverflow; document.removeEventListener("keydown", handleKeyDown); };
   }, [open]);
 
-  const navigation = <NavigationContent principal={principal} dossier={dossier} dossierItems={dossierItems} settings={settings} onNavigate={() => setOpen(false)} />;
+  const navigation = <NavigationContent principal={principal} principalLabel={isPlatformAdmin ? "Administration" : "Principal"} dossier={isPlatformAdmin ? undefined : dossier} dossierItems={isPlatformAdmin ? [] : dossierItems} settings={settings} onNavigate={() => setOpen(false)} />;
   return <>
     <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col overflow-y-auto border-r border-[#E2E8F0] bg-white lg:flex" aria-label="Navigation privée">{navigation}</aside>
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#E2E8F0] bg-white px-5 lg:hidden">
@@ -66,12 +71,12 @@ export function PrivateNavigation({ current, dossier }: { current: PrivateSectio
   </>;
 }
 
-function NavigationContent({ principal, dossier, dossierItems, settings, onNavigate }: { principal: NavigationItem[]; dossier?: PrivateDossierContext; dossierItems: NavigationItem[]; settings: NavigationItem[]; onNavigate: () => void }) {
+function NavigationContent({ principal, principalLabel, dossier, dossierItems, settings, onNavigate }: { principal: NavigationItem[]; principalLabel: string; dossier?: PrivateDossierContext; dossierItems: NavigationItem[]; settings: NavigationItem[]; onNavigate: () => void }) {
   return <div className="flex min-h-full flex-1 flex-col px-4 py-5">
     <Link href="/tableau-de-bord" onClick={onNavigate} className="focus-ring mb-7 flex items-center gap-3 rounded-xl px-2"><span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#2563EB] text-white"><ShieldCheck aria-hidden="true" size={20} /></span><span className="min-w-0"><span className="block font-bold leading-tight">{APP_NAME}</span><span className="block text-xs text-[#94A3B8]">v{APP_VERSION}</span></span></Link>
-    <NavigationGroup label="Principal" items={principal} onNavigate={onNavigate} />
+    <NavigationGroup label={principalLabel} items={principal} onNavigate={onNavigate} />
     {dossier && <div className="mt-7 min-w-0"><p className="px-3 text-xs font-bold uppercase tracking-[0.12em] text-[#94A3B8]">Dossier en cours</p><p className="mt-2 truncate px-3 text-sm font-bold text-[#334155]" title={dossier.name}>{dossier.name}</p><div className="mt-2 space-y-1"><NavigationLinks items={dossierItems} onNavigate={onNavigate} /></div></div>}
-    <div className="mt-7"><NavigationGroup label="Paramètres" items={settings} onNavigate={onNavigate} /></div>
+    {settings.length > 0 && <div className="mt-7"><NavigationGroup label="Paramètres" items={settings} onNavigate={onNavigate} /></div>}
     <div className="mt-auto space-y-1 border-t border-[#E2E8F0] pt-4"><NavigationLinks items={[{ label: "Historique des versions", href: "/historique-versions", icon: History, active: false }]} onNavigate={onNavigate} /><form action={logoutAction}><button type="submit" className="focus-ring flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[#64748B] transition-colors hover:bg-slate-50 hover:text-[#0F172A]"><LogOut aria-hidden="true" size={18} />Déconnexion</button></form><Link href="/historique-versions" onClick={onNavigate} className="focus-ring ml-3 inline-block rounded text-xs text-[#94A3B8] hover:text-[#64748B]">{APP_NAME} v{APP_VERSION}</Link></div>
   </div>;
 }

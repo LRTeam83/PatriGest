@@ -16,7 +16,7 @@ export function PublicFooter() {
           <Link className="focus-ring rounded-md hover:text-[#2563EB]" href="#fonctionnalites">Fonctionnalités</Link>
           <Link className="focus-ring rounded-md hover:text-[#2563EB]" href="#aide">Aide</Link>
           <Link className="focus-ring rounded-md hover:text-[#2563EB]" href="/connexion">Se connecter</Link>
-          <Link className="focus-ring rounded-md text-[#EA580C] hover:text-orange-700" href="/inscription">Créer un compte</Link>
+          <Link className="focus-ring rounded-md text-[#EA580C] hover:text-orange-700" href="/demande-acces">Créer un compte</Link>
         </nav>
       </div>
     </footer>

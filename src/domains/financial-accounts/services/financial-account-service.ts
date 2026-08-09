@@ -8,7 +8,7 @@ export type FinancialAccountWithValuations = FinancialAccount & { valuations: Ac
 
 async function requireOwnedPerson(protectedPersonId: string) {
   const auth = await getAuthenticatedUser();
-  const { data, error } = await auth.supabase.from("protected_persons").select("id").eq("id", protectedPersonId).eq("owner_id", auth.userId).maybeSingle();
+  const { data, error } = await auth.supabase.from("protected_persons").select("id").eq("id", protectedPersonId).maybeSingle();
   if (error || !data) throw new Error("Dossier introuvable.");
   return auth;
 }
@@ -17,7 +17,7 @@ async function requireOwnedAccount(accountId: string) {
   const auth = await getAuthenticatedUser();
   const { data: account, error } = await auth.supabase.from("financial_accounts").select("*").eq("id", accountId).maybeSingle();
   if (error || !account) throw new Error("Compte introuvable.");
-  const { data: person } = await auth.supabase.from("protected_persons").select("id").eq("id", account.protected_person_id).eq("owner_id", auth.userId).maybeSingle();
+  const { data: person } = await auth.supabase.from("protected_persons").select("id").eq("id", account.protected_person_id).maybeSingle();
   if (!person) throw new Error("Compte introuvable.");
   return { ...auth, account };
 }
