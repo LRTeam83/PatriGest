@@ -31,7 +31,7 @@ export async function updateSession(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims();
   const pathname = request.nextUrl.pathname;
-  const isProtectedRoute = ["/tableau-de-bord", "/dossiers", "/administration", "/parametres", "/historique-versions"].some((path) =>
+  const isProtectedRoute = ["/tableau-de-bord", "/dossiers", "/administration", "/parametres"].some((path) =>
     pathname.startsWith(path),
   );
 

@@ -6,7 +6,7 @@ import { ArrowLeftRight, CalendarRange, FolderCog, FolderOpen, History, LayoutDa
 import { logoutAction } from "@/app/(auth)/actions";
 import { APP_NAME, APP_VERSION } from "@/lib/app";
 
-export type PrivateSection = "dashboard" | "dossiers" | "dossier-management" | "settings" | "administration" | "administration-requests" | "administration-users";
+export type PrivateSection = "dashboard" | "dossiers" | "dossier-management" | "settings" | "administration" | "administration-requests" | "administration-users" | "history";
 export type DossierSection = "overview" | "accounts" | "operations" | "periods" | "access";
 export type PrivateDossierContext = { id: string; name: string; current: DossierSection; accessRole?: "owner" | "manager" | "read_only" };
 type NavigationItem = { label: string; href: string; icon: LucideIcon; active: boolean };
