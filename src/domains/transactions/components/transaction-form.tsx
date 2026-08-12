@@ -11,29 +11,30 @@ import { isValuationAccount } from "@/domains/financial-accounts/utils/financial
 
 type Mode = "income" | "expense" | "transfer";
 
-export function TransactionForm({ personId, accounts, categories, transaction }: { personId: string; accounts: FinancialAccount[]; categories: Category[]; transaction?: Transaction }) {
+export function TransactionForm({ personId, accounts, categories, transaction, defaultAccountId, defaultMode }: { personId: string; accounts: FinancialAccount[]; categories: Category[]; transaction?: Transaction; defaultAccountId?: string; defaultMode?: Mode }) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>(transaction?.transaction_type === "income" ? "income" : "expense");
+  const [mode, setMode] = useState<Mode>(transaction?.transaction_type === "income" ? "income" : defaultMode ?? "expense");
   const action = transaction ? updateTransactionAction.bind(null, personId, transaction.id) : mode === "transfer" ? createTransferAction.bind(null, personId) : createTransactionAction.bind(null, personId);
   const [state, formAction] = useActionState(action, initialTransactionState);
   const activeAccounts = accounts.filter((account) => account.status === "active");
   const transactionalAccounts = activeAccounts.filter((account) => !isValuationAccount(account.account_type));
   const usableCategories = categories.filter((category) => category.active && (category.usage === mode || category.usage === "both"));
-  useEffect(() => { if (!transaction && mode !== "transfer" && state.status === "success") { router.push(`/dossiers/${personId}/operations`); router.refresh(); } }, [mode, personId, router, state.status, transaction]);
+  const returnHref = defaultAccountId ? `/dossiers/${personId}/comptes/${defaultAccountId}/operations` : `/dossiers/${personId}/operations`;
+  useEffect(() => { if (!transaction && mode !== "transfer" && state.status === "success") { router.push(returnHref); router.refresh(); } }, [mode, returnHref, router, state.status, transaction]);
 
   return <form action={formAction} className="grid gap-3 sm:grid-cols-2">
     {!transaction && <div className="grid grid-cols-3 gap-2 sm:col-span-2" role="group" aria-label="Type d’opération">{([ ["income", "Recette"], ["expense", "Dépense"], ["transfer", "Virement"] ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setMode(value)} className={`button ${mode === value ? "button-primary" : "button-secondary"}`}>{label}</button>)}</div>}
     {mode === "transfer" && !transaction ? <>
       <input type="hidden" name="kind" value="transfer" />
       <DateField name="transferDate" label="Date" errors={state.fieldErrors?.transferDate} />
-      <AccountSelect name="sourceAccountId" label="Compte source" accounts={activeAccounts} errors={state.fieldErrors?.sourceAccountId} />
+      <AccountSelect name="sourceAccountId" label="Compte source" accounts={activeAccounts} defaultValue={defaultAccountId} errors={state.fieldErrors?.sourceAccountId} />
       <AccountSelect name="destinationAccountId" label="Compte destination" accounts={activeAccounts} errors={state.fieldErrors?.destinationAccountId} />
       <Field name="amount" label="Montant" type="number" step="0.01" errors={state.fieldErrors?.amount} />
       <Field name="label" label="Libellé facultatif" errors={state.fieldErrors?.label} />
       <Textarea name="comment" label="Commentaire facultatif" />
     </> : <>
       <input type="hidden" name="transactionType" value={transaction?.transaction_type ?? mode} />
-      <AccountSelect name="financialAccountId" label={mode === "income" ? "Compte crédité" : "Compte débité"} accounts={transactionalAccounts} defaultValue={transaction?.financial_account_id} errors={state.fieldErrors?.financialAccountId} />
+      <AccountSelect name="financialAccountId" label={mode === "income" ? "Compte crédité" : "Compte débité"} accounts={transactionalAccounts} defaultValue={transaction?.financial_account_id ?? defaultAccountId} errors={state.fieldErrors?.financialAccountId} />
       <DateField name="transactionDate" label="Date" defaultValue={transaction?.transaction_date} errors={state.fieldErrors?.transactionDate} />
       <Field name="label" label="Libellé" defaultValue={transaction?.label} errors={state.fieldErrors?.label} />
       <Field name="amount" label="Montant" type="number" step="0.01" defaultValue={transaction?.amount} errors={state.fieldErrors?.amount} />
@@ -43,7 +44,7 @@ export function TransactionForm({ personId, accounts, categories, transaction }:
       <Textarea name="comment" label="Commentaire facultatif" defaultValue={transaction?.comment} />
     </>}
     <div className="sm:col-span-2"><FormMessage state={state} /></div>
-    <div className="flex flex-col-reverse gap-2 sm:col-span-2 sm:flex-row sm:justify-end"><Link href={`/dossiers/${personId}/operations`} className="button button-secondary">Annuler</Link><div className="sm:min-w-40"><SubmitButton pendingLabel="Enregistrement…">{transaction ? "Enregistrer" : mode === "transfer" ? "Créer le virement" : "Ajouter l’opération"}</SubmitButton></div></div>
+    <div className="flex flex-col-reverse gap-2 sm:col-span-2 sm:flex-row sm:justify-end"><Link href={transaction ? `/dossiers/${personId}/operations` : returnHref} className="button button-secondary">Annuler</Link><div className="sm:min-w-40"><SubmitButton pendingLabel="Enregistrement…">{transaction ? "Enregistrer" : mode === "transfer" ? "Créer le virement" : "Ajouter l’opération"}</SubmitButton></div></div>
   </form>;
 }
 
