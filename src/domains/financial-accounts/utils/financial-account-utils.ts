@@ -27,5 +27,22 @@ export function getCurrentAccountValue(account: FinancialAccount, valuations: Ac
 }
 
 export function getCurrentPatrimonyValue(accounts: Array<FinancialAccount & { valuations: AccountValuation[]; transactions: Transaction[] }>) {
-  return accounts.filter((account) => account.status === "active").reduce((total, account) => total + getCurrentAccountValue(account, account.valuations, account.transactions).value, 0);
+  const activeAccounts = accounts.filter((account) => account.status === "active");
+  const displayedValue = activeAccounts.reduce((total, account) => total + getCurrentAccountValue(account, account.valuations, account.transactions).value, 0);
+  const accountById = new Map(activeAccounts.map((account) => [account.id, account]));
+  const transferLegs = new Map<string, Transaction[]>();
+  for (const account of activeAccounts) for (const transaction of account.transactions) if (transaction.transfer_id) transferLegs.set(transaction.transfer_id, [...(transferLegs.get(transaction.transfer_id) ?? []), transaction]);
+  let placementTransferAdjustment = 0;
+  for (const legs of transferLegs.values()) {
+    if (legs.length !== 2) continue;
+    const placementLeg = legs.find((leg) => isValuationAccount(accountById.get(leg.financial_account_id)?.account_type ?? "checking"));
+    const classicLeg = legs.find((leg) => !isValuationAccount(accountById.get(leg.financial_account_id)?.account_type ?? "checking"));
+    if (!placementLeg || !classicLeg) continue;
+    const placement = accountById.get(placementLeg.financial_account_id)!;
+    const latestValuationDate = placement.valuations.reduce<string | null>((latest, valuation) => !latest || valuation.valuation_date > latest ? valuation.valuation_date : latest, null);
+    const baselineDate = latestValuationDate ?? placement.initial_balance_date;
+    if (placementLeg.transaction_date <= baselineDate) continue;
+    placementTransferAdjustment += placementLeg.transaction_type === "transfer_in" ? placementLeg.amount : -placementLeg.amount;
+  }
+  return displayedValue + placementTransferAdjustment;
 }

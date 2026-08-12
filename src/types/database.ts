@@ -144,6 +144,24 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["transactions"]["Insert"]>;
         Relationships: [];
       };
+      proof_reference_counters: {
+        Row: { protected_person_id: string; reference_year: number; last_number: number; updated_at: string };
+        Insert: { protected_person_id: string; reference_year: number; last_number: number; updated_at?: string };
+        Update: { last_number?: number; updated_at?: string };
+        Relationships: [];
+      };
+      proof_reference_assignments: {
+        Row: { transaction_id: string; protected_person_id: string; reference_year: number; reference_number: number; proof_reference: string; created_at: string };
+        Insert: { transaction_id: string; protected_person_id: string; reference_year: number; reference_number: number; proof_reference: string; created_at?: string };
+        Update: never;
+        Relationships: [];
+      };
+      transaction_documents: {
+        Row: { id: string; transaction_id: string; storage_path: string; file_name: string; mime_type: string; file_size: number; created_by: string; created_at: string; updated_at: string };
+        Insert: { id?: string; transaction_id: string; storage_path: string; file_name: string; mime_type: string; file_size: number; created_by: string; created_at?: string; updated_at?: string };
+        Update: { file_name?: string; mime_type?: string; file_size?: number; created_by?: string; updated_at?: string };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -167,6 +185,7 @@ export type FinancialAccount = Database["public"]["Tables"]["financial_accounts"
 export type AccountValuation = Database["public"]["Tables"]["account_valuations"]["Row"];
 export type Category = Database["public"]["Tables"]["categories"]["Row"];
 export type Transaction = Database["public"]["Tables"]["transactions"]["Row"];
+export type TransactionDocument = Database["public"]["Tables"]["transaction_documents"]["Row"];
 export type Transfer = Database["public"]["Tables"]["transfers"]["Row"];
 export type AccountRequest = Database["public"]["Tables"]["account_requests"]["Row"];
 export type ProtectedPersonAccess = Database["public"]["Tables"]["protected_person_access"]["Row"];

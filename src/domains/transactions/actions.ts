@@ -22,7 +22,7 @@ export async function createTransactionAction(personId: string, _state: Transact
   try { await createTransaction(personId, parsed.data); }
   catch (error) { return { status: "error", message: isClosedPeriodError(error) ? "Impossible d’ajouter une opération dans un exercice clôturé." : error instanceof Error ? error.message : "Impossible d’enregistrer l’opération." }; }
   refresh(personId);
-  redirect(`/dossiers/${personId}/operations`);
+  return { status: "success", message: "L’opération a été créée." };
 }
 
 export async function updateTransactionAction(personId: string, transactionId: string, _state: TransactionActionState, formData: FormData): Promise<TransactionActionState> {

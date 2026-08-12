@@ -10,6 +10,31 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.3.3",
+    date: "2026-08-12",
+    title: "Justificatifs et gestion des placements",
+    summary: `${APP_NAME} permet désormais de numéroter automatiquement les justificatifs de dépenses, de joindre des pièces privées aux opérations et de mieux distinguer les mouvements liés aux placements.`,
+    changes: [
+      "Saisie des opérations indépendante des exercices",
+      "Création rétroactive des exercices",
+      "Verrouillage des opérations lorsqu’un exercice est clôturé",
+      "Réouverture contrôlée des exercices",
+      "Interdiction du chevauchement des exercices",
+      "Numérotation automatique des dépenses au format YYYY-NNNN, indépendante par dossier et par année",
+      "Référence du justificatif figée après attribution",
+      "Ajout de justificatifs PDF, JPEG et PNG dans un stockage privé",
+      "Nom automatique des fichiers, par exemple : 2026-0042 - Pharmacie du Centre.pdf",
+      "Consultation, téléchargement et remplacement des justificatifs selon les droits owner, manager et read_only",
+      "Consultation en lecture seule des opérations ouvertes ou clôturées",
+      "Assurances-vie et autres placements exclus des recettes et dépenses ordinaires",
+      "Virements vers les placements identifiés comme Versement sur placement",
+      "Virements depuis les placements identifiés comme Rachat de placement",
+      "Valeur patrimoniale des placements conservée selon leur dernière valorisation",
+      "Neutralité patrimoniale des virements internes avec placements",
+      "Correction de la création de plusieurs dossiers par un même utilisateur",
+    ],
+  },
+  {
     version: "0.3.2",
     date: "2026-08-10",
     title: "Accès multi-utilisateur et administration",

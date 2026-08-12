@@ -19,7 +19,7 @@ export default async function ManagementPeriodsPage({ params }: { params: Promis
     <AppBreadcrumb items={[{ label: "Dossiers", href: "/dossiers" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}/comptes` }, { label: "Exercices de gestion" }]} />
     <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#2563EB]">{person.first_name} {person.last_name}</p>
     <h1 className="mt-1 text-2xl font-bold sm:text-[28px]">Exercices de gestion</h1>
-    <p className="mt-1 text-sm text-[#64748B]">Consultez les périodes ouvertes et clôturées du dossier.</p>
+    <p className="mt-1 text-sm text-[#64748B]">Les exercices regroupent les opérations saisies sur une période. Leur création ne déplace ni ne duplique aucune opération.</p>
     <DossierNavigation protectedPersonId={protectedPersonId} current="periods" />
     {person.accessRole === "read_only" ? <div className="mt-5 space-y-2">{person.managementPeriods.map((period) => <article key={period.id} className="rounded-xl border border-[#E2E8F0] bg-white p-4"><p className="text-sm font-bold">Du {period.start_date} au {period.end_date}</p><p className="mt-1 text-xs text-[#64748B]">{period.status === "open" ? "Ouvert" : "Clôturé"} · Lecture seule</p></article>)}</div> : <ManagementPeriodManager protectedPersonId={protectedPersonId} periods={person.managementPeriods} />}
   </PrivateShell>;
