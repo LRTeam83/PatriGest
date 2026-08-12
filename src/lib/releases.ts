@@ -10,6 +10,28 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.3.4",
+    date: "2026-08-12",
+    title: "Registre des comptes et navigation financière",
+    summary: `${APP_NAME} propose désormais un parcours financier centré sur le compte, avec un registre bancaire plus naturel, un solde progressif après chaque opération et une navigation simplifiée vers les opérations et les informations du compte.`,
+    changes: [
+      "Ouverture directe du registre lors d’un clic sur un compte bancaire",
+      "Journal dédié aux opérations du compte",
+      "Solde progressif après chaque opération, calculé sur l’historique complet indépendamment des filtres affichés",
+      "Présentation distincte des dépenses et des recettes",
+      "Virements intégrés au registre selon leur sens",
+      "Lignes d’opération entièrement cliquables",
+      "Actions Modifier et Supprimer déplacées sur la fiche de l’opération",
+      "Consultation adaptée aux opérations clôturées et aux utilisateurs en lecture seule",
+      "Bouton Informations du compte donnant accès à la fiche technique",
+      "Création d’une opération depuis le registre avec le compte présélectionné",
+      "Accès direct au mode Virement",
+      "Interface desktop plus dense, proche d’un registre bancaire",
+      "Cartes mobiles compactes et entièrement cliquables",
+      "Parcours spécifique de valorisation conservé pour les placements",
+    ],
+  },
+  {
     version: "0.3.3",
     date: "2026-08-12",
     title: "Justificatifs et gestion des placements",
