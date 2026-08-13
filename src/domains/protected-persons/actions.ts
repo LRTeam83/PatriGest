@@ -11,6 +11,7 @@ import {
   closeManagementPeriod,
   createProtectedPerson,
   createProtectionMeasure,
+  deleteProtectedPerson,
   reopenManagementPeriod,
   updateManagementPeriod,
 } from "./services/protected-person-service";
@@ -62,6 +63,18 @@ export async function addProtectionMeasureAction(
   } catch {
     return { status: "error", message: "Impossible d’ajouter la mesure. Veuillez réessayer." };
   }
+}
+
+export async function deleteProtectedPersonAction(protectedPersonId: string, _state: ProtectedPersonActionState, _formData: FormData): Promise<ProtectedPersonActionState> {
+  void _state;
+  void _formData;
+  if (!z.uuid().safeParse(protectedPersonId).success) return { status: "error", message: "Dossier invalide." };
+  try { await deleteProtectedPerson(protectedPersonId); }
+  catch (error) { return { status: "error", message: error instanceof Error ? error.message : "Impossible de supprimer ce dossier." }; }
+  revalidatePath("/dossiers");
+  revalidatePath("/dossiers/gestion");
+  revalidatePath("/tableau-de-bord");
+  redirect("/dossiers/gestion");
 }
 
 export async function addManagementPeriodAction(

@@ -172,6 +172,9 @@ export type Database = {
       accept_protected_person_invitation: { Args: { p_token_hash: string }; Returns: string };
       create_internal_transfer: { Args: { p_protected_person_id: string; p_source_account_id: string; p_destination_account_id: string; p_transfer_date: string; p_amount: number; p_label?: string | null; p_comment?: string | null }; Returns: string };
       delete_internal_transfer: { Args: { p_transfer_id: string }; Returns: undefined };
+      delete_empty_financial_account: { Args: { p_account_id: string }; Returns: undefined };
+      delete_empty_protected_person: { Args: { p_protected_person_id: string }; Returns: undefined };
+      delete_transaction_with_document: { Args: { p_transaction_id: string }; Returns: undefined };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

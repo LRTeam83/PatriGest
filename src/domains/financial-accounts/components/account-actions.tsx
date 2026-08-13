@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { FormMessage, SubmitButton } from "@/components/auth/form-controls";
 import { AppConfirmDialog } from "@/components/ui/app-confirm-dialog";
-import { closeFinancialAccountAction, createAccountValuationAction, reopenFinancialAccountAction } from "../actions";
+import { closeFinancialAccountAction, createAccountValuationAction, deleteFinancialAccountAction, reopenFinancialAccountAction } from "../actions";
 import { initialFinancialAccountState } from "../state";
 
 export function CloseAccountForm({ protectedPersonId, accountId, accountName, minimumDate }: { protectedPersonId: string; accountId: string; accountName: string; minimumDate: string }) {
@@ -20,9 +20,15 @@ export function ReopenAccountForm({ protectedPersonId, accountId, accountName }:
   return <><button type="button" className="button button-primary" onClick={() => setOpen(true)}>Rouvrir le compte</button><form action={reopenFinancialAccountAction.bind(null, protectedPersonId, accountId)}><AppConfirmDialog open={open} title="Réouvrir ce compte ?" description="Le compte redeviendra actif et sera réintégré au patrimoine." subject={accountName} onClose={() => setOpen(false)} actions={<DialogSubmitButton pendingLabel="Réouverture…" success>Réouvrir le compte</DialogSubmitButton>} /></form></>;
 }
 
-function DialogSubmitButton({ children, pendingLabel, success = false }: { children: React.ReactNode; pendingLabel: string; success?: boolean }) {
+export function DeleteAccountForm({ protectedPersonId, accountId, accountName }: { protectedPersonId: string; accountId: string; accountName: string }) {
+  const [open, setOpen] = useState(false);
+  const [state, action] = useActionState(deleteFinancialAccountAction.bind(null, protectedPersonId, accountId), initialFinancialAccountState);
+  return <><button type="button" className="text-xs font-semibold text-[#B91C1C] hover:underline" onClick={() => setOpen(true)}>Supprimer le compte</button><form action={action}><AppConfirmDialog open={open} title="Supprimer ce compte ?" description="Cette action n’est possible que si le compte ne contient plus aucune opération, aucun virement, aucune valorisation ni aucun justificatif." subject={accountName} onClose={() => setOpen(false)} actions={<DialogSubmitButton pendingLabel="Suppression…" destructive>Supprimer le compte</DialogSubmitButton>}><FormMessage state={state} /></AppConfirmDialog></form></>;
+}
+
+function DialogSubmitButton({ children, pendingLabel, success = false, destructive = false }: { children: React.ReactNode; pendingLabel: string; success?: boolean; destructive?: boolean }) {
   const { pending } = useFormStatus();
-  return <button type="submit" className={`button ${success ? "bg-[#16A34A] text-white hover:bg-green-700" : "button-primary"}`} disabled={pending}>{pending ? pendingLabel : children}</button>;
+  return <button type="submit" className={`button ${destructive ? "button-danger" : success ? "bg-[#16A34A] text-white hover:bg-green-700" : "button-primary"}`} disabled={pending}>{pending ? pendingLabel : children}</button>;
 }
 
 export function ValuationForm({ protectedPersonId, accountId }: { protectedPersonId: string; accountId: string }) {

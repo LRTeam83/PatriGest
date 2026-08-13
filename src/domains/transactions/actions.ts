@@ -14,6 +14,12 @@ const idsValid = (...ids: string[]) => ids.every((id) => z.uuid().safeParse(id).
 const txValues = (formData: FormData) => ({ financialAccountId: formData.get("financialAccountId"), transactionDate: formData.get("transactionDate"), transactionType: formData.get("transactionType"), label: formData.get("label"), amount: formData.get("amount"), categoryId: formData.get("categoryId"), proofReference: formData.get("proofReference"), comment: formData.get("comment") });
 const transferValues = (formData: FormData) => ({ sourceAccountId: formData.get("sourceAccountId"), destinationAccountId: formData.get("destinationAccountId"), transferDate: formData.get("transferDate"), amount: formData.get("amount"), label: formData.get("label"), comment: formData.get("comment") });
 function refresh(personId: string) { revalidatePath(`/dossiers/${personId}`); revalidatePath(`/dossiers/${personId}/operations`); revalidatePath(`/dossiers/${personId}/comptes`); }
+function safeReturnHref(personId: string, returnHref: string) {
+  const globalHref = `/dossiers/${personId}/operations`;
+  if (returnHref === globalHref) return returnHref;
+  const match = returnHref.match(new RegExp(`^/dossiers/${personId}/comptes/([0-9a-f-]{36})/operations$`, "i"));
+  return match && z.uuid().safeParse(match[1]).success ? returnHref : globalHref;
+}
 
 export async function createTransactionAction(personId: string, _state: TransactionActionState, formData: FormData): Promise<TransactionActionState> {
   if (!idsValid(personId)) return { status: "error", message: "Dossier invalide." };
@@ -45,22 +51,22 @@ export async function createTransferAction(personId: string, _state: Transaction
   redirect(`/dossiers/${personId}/operations`);
 }
 
-export async function deleteTransactionAction(personId: string, id: string, _state: TransactionActionState, _formData: FormData): Promise<TransactionActionState> {
+export async function deleteTransactionAction(personId: string, id: string, returnHref: string, _state: TransactionActionState, _formData: FormData): Promise<TransactionActionState> {
   void _state;
   void _formData;
   if (!idsValid(personId, id)) return { status: "error", message: "Opération invalide." };
   try { await deleteTransaction(id, personId); }
   catch (error) { return { status: "error", message: isClosedPeriodError(error) ? "Cette opération appartient à un exercice clôturé et ne peut plus être supprimée." : "Impossible de supprimer l’opération." }; }
   refresh(personId);
-  return { status: "success", message: "L’opération a été supprimée." };
+  redirect(safeReturnHref(personId, returnHref));
 }
 
-export async function deleteTransferAction(personId: string, id: string, _state: TransactionActionState, _formData: FormData): Promise<TransactionActionState> {
+export async function deleteTransferAction(personId: string, id: string, returnHref: string, _state: TransactionActionState, _formData: FormData): Promise<TransactionActionState> {
   void _state;
   void _formData;
   if (!idsValid(personId, id)) return { status: "error", message: "Virement invalide." };
   try { await deleteTransfer(id); }
   catch (error) { return { status: "error", message: isClosedPeriodError(error) ? "Ce virement appartient à un exercice clôturé et ne peut plus être supprimé." : "Impossible de supprimer le virement." }; }
   refresh(personId);
-  return { status: "success", message: "Le virement a été supprimé." };
+  redirect(safeReturnHref(personId, returnHref));
 }

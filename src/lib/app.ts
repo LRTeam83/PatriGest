@@ -1,6 +1,6 @@
 export const APP_NAME = "PatriGest";
 
-export const APP_VERSION = "0.3.4";
+export const APP_VERSION = "0.3.5";
 
 export const APP_SLOGAN =
   "La gestion des personnes protégées, en toute simplicité.";

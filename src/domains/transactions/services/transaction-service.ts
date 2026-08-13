@@ -17,4 +17,29 @@ export async function createTransaction(personId: string, input: TransactionInpu
 export async function updateTransaction(id: string, personId: string, input: TransactionInput) { const existing = await getTransaction(id); if (!existing || existing.transfer_id || existing.account.protected_person_id !== personId) throw new Error("Opération introuvable."); const { supabase, userId, account } = await ownedAccount(input.financialAccountId, personId); if (isValuationAccount(account.account_type)) throw new Error("Les recettes et dépenses nécessitent un compte transactionnel."); await ensureDateIsNotClosed(supabase, personId, existing.transaction_date); await ensureDateIsNotClosed(supabase, personId, input.transactionDate); if (!validDate(account, input.transactionDate)) throw new Error("Date incompatible avec le compte."); await validateCategory(supabase, userId, input.categoryId, input.transactionType); const { error } = await supabase.from("transactions").update({ financial_account_id: input.financialAccountId, transaction_date: input.transactionDate, transaction_type: input.transactionType, label: input.label, amount: input.amount, category_id: input.categoryId, proof_reference: existing.proof_reference, comment: input.comment }).eq("id", id); if (error?.message.toLocaleLowerCase("fr-FR").includes("exercice clôturé")) throw new Error(CLOSED_PERIOD_ERROR); if (error) throw new Error(error.message.includes("année") ? error.message : "Impossible de modifier l’opération."); }
 
 export async function getTransactionDocument(transactionId: string): Promise<TransactionDocument | null> { const { supabase } = await getAuthenticatedUser(); const { data, error } = await supabase.from("transaction_documents").select("*").eq("transaction_id", transactionId).maybeSingle(); if (error) throw new Error("Impossible de charger le justificatif."); return data; }
-export async function deleteTransaction(id: string, personId: string) { const existing = await getTransaction(id); if (!existing || existing.transfer_id || existing.account.protected_person_id !== personId) throw new Error("Opération introuvable."); const { supabase } = await ownedPerson(personId); await ensureDateIsNotClosed(supabase, personId, existing.transaction_date); const { error } = await supabase.from("transactions").delete().eq("id", id); if (error?.message.toLocaleLowerCase("fr-FR").includes("exercice clôturé")) throw new Error(CLOSED_PERIOD_ERROR); if (error) throw new Error("Impossible de supprimer l’opération."); }
+export async function deleteTransaction(id: string, personId: string) {
+  const existing = await getTransaction(id);
+  if (!existing || existing.transfer_id || existing.account.protected_person_id !== personId) throw new Error("Opération introuvable.");
+  const { supabase } = await ownedPerson(personId);
+  await ensureDateIsNotClosed(supabase, personId, existing.transaction_date);
+  const document = await getTransactionDocument(id);
+  let backup: Blob | null = null;
+
+  if (document) {
+    const { data, error: downloadError } = await supabase.storage.from("transaction-proofs").download(document.storage_path);
+    if (downloadError || !data) throw new Error("Impossible de sécuriser le justificatif avant la suppression.");
+    backup = data;
+    const { error: storageError } = await supabase.storage.from("transaction-proofs").remove([document.storage_path]);
+    if (storageError) throw new Error("Impossible de supprimer le justificatif.");
+  }
+
+  const { error } = await supabase.rpc("delete_transaction_with_document", { p_transaction_id: id });
+  if (!error) return;
+
+  if (document && backup) {
+    const { error: restoreError } = await supabase.storage.from("transaction-proofs").upload(document.storage_path, backup, { contentType: document.mime_type, upsert: false });
+    if (restoreError) throw new Error("La suppression a échoué et le justificatif n’a pas pu être restauré. Contactez l’administrateur.");
+  }
+  if (error.message.toLocaleLowerCase("fr-FR").includes("exercice clôturé")) throw new Error(CLOSED_PERIOD_ERROR);
+  throw new Error("Impossible de supprimer l’opération.");
+}

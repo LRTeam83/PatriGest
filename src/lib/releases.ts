@@ -10,6 +10,26 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.3.5",
+    date: "2026-08-13",
+    title: "Suppressions contrôlées et nettoyage",
+    summary: `${APP_NAME} permet désormais de supprimer proprement les opérations, comptes, dossiers et utilisateurs de test tout en protégeant les données encore liées et en évitant les suppressions en cascade non désirées.`,
+    changes: [
+      "Correction de la navigation après suppression d’une opération",
+      "Retour automatique vers le registre ou le journal approprié",
+      "Suppression d’une opération avec son justificatif",
+      "Suppression contrôlée du fichier privé Storage associé",
+      "Suppression d’un compte uniquement lorsqu’il est vide",
+      "Refus clair lorsqu’un compte contient encore des données",
+      "Suppression d’un dossier uniquement lorsqu’il est vide",
+      "Refus clair lorsqu’un dossier contient encore des comptes ou des données liées",
+      "Suppression administrative d’un utilisateur sans dossier ni accès métier",
+      "Protection contre la suppression d’un utilisateur encore lié à des données",
+      "Protection des comptes platform_admin",
+      "Aucune suppression métier silencieuse en cascade",
+    ],
+  },
+  {
     version: "0.3.4",
     date: "2026-08-12",
     title: "Registre des comptes et navigation financière",

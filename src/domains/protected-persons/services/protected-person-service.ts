@@ -93,6 +93,15 @@ export async function updateProtectedPerson(id: string, input: ProtectedPersonIn
   return data;
 }
 
+export async function deleteProtectedPerson(id: string) {
+  const { supabase } = await getAuthenticatedUser();
+  const { error } = await supabase.rpc("delete_empty_protected_person", { p_protected_person_id: id });
+  if (error) {
+    if (error.message.includes("contient des comptes")) throw new Error("Ce dossier ne peut pas être supprimé tant qu’il contient des comptes ou d’autres données associées.");
+    throw new Error("Impossible de supprimer ce dossier.");
+  }
+}
+
 export async function createProtectionMeasure(protectedPersonId: string, input: ProtectionMeasureInput) {
   const { supabase } = await getAuthenticatedUser();
   const { data: person } = await supabase.from("protected_persons").select("id").eq("id", protectedPersonId).maybeSingle();

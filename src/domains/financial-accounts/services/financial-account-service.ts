@@ -73,6 +73,16 @@ export async function reopenFinancialAccount(accountId: string) {
   if (error) throw new Error("Impossible de rouvrir le compte.");
 }
 
+export async function deleteFinancialAccount(accountId: string, protectedPersonId: string) {
+  const { supabase, account } = await requireOwnedAccount(accountId);
+  if (account.protected_person_id !== protectedPersonId) throw new Error("Compte introuvable.");
+  const { error } = await supabase.rpc("delete_empty_financial_account", { p_account_id: accountId });
+  if (error) {
+    if (error.message.includes("contient des opérations")) throw new Error("Ce compte ne peut pas être supprimé tant qu’il contient des opérations, virements, valorisations ou justificatifs.");
+    throw new Error("Impossible de supprimer ce compte.");
+  }
+}
+
 export async function getAccountValuations(accountId: string) {
   const { supabase } = await requireOwnedAccount(accountId);
   const { data, error } = await supabase.from("account_valuations").select("*").eq("financial_account_id", accountId).order("valuation_date", { ascending: false });

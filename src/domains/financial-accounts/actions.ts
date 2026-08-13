@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { accountValuationSchema } from "./schemas/account-valuation-schema";
 import { closeFinancialAccountSchema, financialAccountSchema } from "./schemas/financial-account-schema";
-import { closeFinancialAccount, createAccountValuation, createFinancialAccount, getFinancialAccount, reopenFinancialAccount, updateFinancialAccount } from "./services/financial-account-service";
+import { closeFinancialAccount, createAccountValuation, createFinancialAccount, deleteFinancialAccount, getFinancialAccount, reopenFinancialAccount, updateFinancialAccount } from "./services/financial-account-service";
 import type { FinancialAccountActionState } from "./state";
 
 function invalid(error: z.ZodError): FinancialAccountActionState { return { status: "error", message: "Vérifiez les informations saisies.", fieldErrors: error.flatten().fieldErrors }; }
@@ -51,6 +51,17 @@ export async function reopenFinancialAccountAction(protectedPersonId: string, ac
   revalidatePath(`/dossiers/${protectedPersonId}/comptes`);
   revalidatePath(`/dossiers/${protectedPersonId}/comptes/${accountId}`);
   revalidatePath(`/dossiers/${protectedPersonId}`);
+}
+
+export async function deleteFinancialAccountAction(protectedPersonId: string, accountId: string, _state: FinancialAccountActionState, _formData: FormData): Promise<FinancialAccountActionState> {
+  void _state;
+  void _formData;
+  if (!validIds(protectedPersonId, accountId)) return { status: "error", message: "Compte invalide." };
+  try { await deleteFinancialAccount(accountId, protectedPersonId); }
+  catch (error) { return { status: "error", message: error instanceof Error ? error.message : "Impossible de supprimer ce compte." }; }
+  revalidatePath(`/dossiers/${protectedPersonId}`);
+  revalidatePath(`/dossiers/${protectedPersonId}/comptes`);
+  redirect(`/dossiers/${protectedPersonId}/comptes`);
 }
 
 export async function createAccountValuationAction(protectedPersonId: string, accountId: string, _state: FinancialAccountActionState, formData: FormData): Promise<FinancialAccountActionState> {

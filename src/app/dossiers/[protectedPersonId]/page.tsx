@@ -8,6 +8,7 @@ import { AppBreadcrumb } from "@/components/ui/app-breadcrumb";
 import { getFinancialAccounts } from "@/domains/financial-accounts/services/financial-account-service";
 import { formatCurrency, getCurrentPatrimonyValue } from "@/domains/financial-accounts/utils/financial-account-utils";
 import { DossierNavigation } from "@/domains/protected-persons/components/dossier-navigation";
+import { DeleteProtectedPerson } from "@/domains/protected-persons/components/delete-protected-person";
 import { ProtectionMeasureForm } from "@/domains/protected-persons/components/detail-forms";
 import { getMeasureLabel } from "@/domains/protected-persons/schemas/protection-measure-schema";
 import { getProtectedPerson } from "@/domains/protected-persons/services/protected-person-service";
@@ -38,6 +39,7 @@ export default async function ProtectedPersonDetailPage({ params }: { params: Pr
       <div id="mesure-protection" className="scroll-mt-28"><InfoCard icon={Scale} title="Mesure de protection">{activeMeasure ? <><p className="text-sm font-semibold">{getMeasureLabel(activeMeasure.measure_type)}</p>{activeMeasure.start_date && <p className="mt-1 text-xs text-[#64748B]">Depuis le {formatDate(activeMeasure.start_date)}</p>}</> : <p className="text-sm text-[#64748B]">Aucune mesure renseignée</p>}<details className="mt-3"><summary className="button button-secondary min-h-9 cursor-pointer list-none px-4">Ajouter une mesure</summary><ProtectionMeasureForm protectedPersonId={person.id} /></details></InfoCard></div>
       <InfoCard icon={CalendarDays} title="Exercice de gestion">{openPeriod ? <><p className="text-sm font-semibold">Exercice ouvert</p><p className="mt-1 text-xs text-[#64748B]">Du {formatDate(openPeriod.start_date)} au {formatDate(openPeriod.end_date)}</p></> : <p className="text-sm text-[#64748B]">Aucun exercice ouvert</p>}<Link href={`/dossiers/${protectedPersonId}/exercices`} className="button button-secondary mt-3 min-h-9 px-4">Gérer les exercices</Link></InfoCard>
     </div>
+    {person.accessRole === "owner" && <section className="mt-4 rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-3"><h2 className="text-sm font-bold">Gestion du dossier</h2><p className="mt-1 text-xs text-[#64748B]">La suppression définitive est disponible uniquement lorsque le dossier ne contient plus aucune donnée associée.</p><div className="mt-2"><DeleteProtectedPerson protectedPersonId={protectedPersonId} personName={`${person.first_name} ${person.last_name}`} /></div></section>}
   </PrivateShell>;
 }
 
