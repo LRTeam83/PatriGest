@@ -127,10 +127,10 @@ export type Database = {
         Relationships: [];
       };
       categories: {
-        Row: { id: string; owner_id: string | null; name: string; usage: CategoryUsage; is_system: boolean; active: boolean; created_at: string; updated_at: string };
-        Insert: { id?: string; owner_id?: string | null; name: string; usage: CategoryUsage; is_system?: boolean; active?: boolean; created_at?: string; updated_at?: string };
-        Update: { name?: string; usage?: CategoryUsage; active?: boolean; updated_at?: string };
-        Relationships: [];
+        Row: { id: string; owner_id: string | null; name: string; usage: CategoryUsage; is_system: boolean; active: boolean; official_code: string | null; official_section: string | null; official_group: string | null; official_order: number | null; official_category_id: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; owner_id?: string | null; name: string; usage: CategoryUsage; is_system?: boolean; active?: boolean; official_code?: string | null; official_section?: string | null; official_group?: string | null; official_order?: number | null; official_category_id?: string | null; created_at?: string; updated_at?: string };
+        Update: { name?: string; usage?: CategoryUsage; active?: boolean; official_category_id?: string | null; updated_at?: string };
+        Relationships: [{ foreignKeyName: "categories_official_category_id_fkey"; columns: ["official_category_id"]; isOneToOne: false; referencedRelation: "categories"; referencedColumns: ["id"] }];
       };
       transfers: {
         Row: { id: string; protected_person_id: string; source_account_id: string; destination_account_id: string; transfer_date: string; amount: number; label: string | null; comment: string | null; created_at: string; updated_at: string };

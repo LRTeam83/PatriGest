@@ -18,7 +18,7 @@ export function TransactionForm({ personId, accounts, categories, transaction, d
   const [state, formAction] = useActionState(action, initialTransactionState);
   const activeAccounts = accounts.filter((account) => account.status === "active");
   const transactionalAccounts = activeAccounts.filter((account) => !isValuationAccount(account.account_type));
-  const usableCategories = categories.filter((category) => category.active && (category.usage === mode || category.usage === "both"));
+  const usableCategories = categories.filter((category) => (category.active || category.id === transaction?.category_id) && (category.usage === mode || category.usage === "both"));
   const returnHref = defaultAccountId ? `/dossiers/${personId}/comptes/${defaultAccountId}/operations` : `/dossiers/${personId}/operations`;
   useEffect(() => { if (!transaction && mode !== "transfer" && state.status === "success") { router.push(returnHref); router.refresh(); } }, [mode, returnHref, router, state.status, transaction]);
 
@@ -38,7 +38,7 @@ export function TransactionForm({ personId, accounts, categories, transaction, d
       <DateField name="transactionDate" label="Date" defaultValue={transaction?.transaction_date} errors={state.fieldErrors?.transactionDate} />
       <Field name="label" label="Libellé" defaultValue={transaction?.label} errors={state.fieldErrors?.label} />
       <Field name="amount" label="Montant" type="number" step="0.01" defaultValue={transaction?.amount} errors={state.fieldErrors?.amount} />
-      <div><label className="auth-label" htmlFor="categoryId">Catégorie facultative</label><select className="auth-input" id="categoryId" name="categoryId" defaultValue={transaction?.category_id ?? ""}><option value="">Sans catégorie</option>{usableCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
+      <div><label className="auth-label" htmlFor="categoryId">Catégorie facultative</label><select className="auth-input" id="categoryId" name="categoryId" defaultValue={transaction?.category_id ?? ""}><option value="">Sans catégorie</option><CategoryOptions categories={usableCategories} /></select></div>
       {mode === "expense" && <div><label className="auth-label" htmlFor="proofReference">Référence du justificatif</label>{transaction?.proof_reference ? <input className="auth-input bg-slate-50 text-[#475569]" id="proofReference" name="proofReference" readOnly value={transaction.proof_reference} /> : <p className="flex min-h-9 items-center rounded-lg bg-blue-50 px-3 text-xs text-[#475569]">Attribuée automatiquement après la création</p>}<input type="hidden" name="proofReference" value={transaction?.proof_reference ?? ""} /></div>}
       {mode === "income" && <input type="hidden" name="proofReference" value="" />}
       <Textarea name="comment" label="Commentaire facultatif" defaultValue={transaction?.comment} />
@@ -52,3 +52,11 @@ function AccountSelect({ name, label, accounts, defaultValue, errors }: { name: 
 function DateField({ name, label, defaultValue, errors }: { name: string; label: string; defaultValue?: string; errors?: string[] }) { return <Field name={name} label={label} type="date" defaultValue={defaultValue ?? new Date().toISOString().slice(0, 10)} errors={errors} />; }
 function Field({ name, label, type = "text", step, defaultValue, errors }: { name: string; label: string; type?: string; step?: string; defaultValue?: string | number | null; errors?: string[] }) { return <div><label className="auth-label" htmlFor={name}>{label} *</label><input className="auth-input" id={name} name={name} required={!label.includes("facultati")} type={type} step={step} min={type === "number" ? "0.01" : undefined} defaultValue={defaultValue ?? ""} /><FieldError messages={errors} /></div>; }
 function Textarea({ name, label, defaultValue }: { name: string; label: string; defaultValue?: string | null }) { return <div className="sm:col-span-2"><label className="auth-label" htmlFor={name}>{label}</label><textarea className="auth-input min-h-20 py-2" id={name} name={name} defaultValue={defaultValue ?? ""} /></div>; }
+
+function CategoryOptions({ categories }: { categories: Category[] }) {
+  const personal = categories.filter((category) => !category.is_system);
+  const official = categories.filter((category) => category.is_system && category.official_code);
+  const groups = new Map<string, Category[]>();
+  for (const category of official) { const group = category.official_group ?? "Autres"; groups.set(group, [...(groups.get(group) ?? []), category]); }
+  return <>{personal.length > 0 && <optgroup label="Mes catégories personnelles">{personal.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</optgroup>}{[...groups.entries()].map(([group, rows]) => <optgroup key={group} label={group}>{rows.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</optgroup>)}</>;
+}

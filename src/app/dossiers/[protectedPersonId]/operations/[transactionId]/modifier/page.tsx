@@ -23,7 +23,7 @@ export default async function EditOperationPage({ params }: { params: Promise<{ 
   if (![protectedPersonId, transactionId].every((id) => z.uuid().safeParse(id).success)) notFound();
   const person = await getProtectedPerson(protectedPersonId);
   if (!person) notFound();
-  const [accounts, categories, transaction] = await Promise.all([getFinancialAccounts(protectedPersonId), getCategories(false), getTransaction(transactionId)]);
+  const [accounts, categories, transaction] = await Promise.all([getFinancialAccounts(protectedPersonId), getCategories(), getTransaction(transactionId)]);
   if (!transaction || transaction.transfer_id || transaction.account.protected_person_id !== protectedPersonId) notFound();
   const readOnly = person.accessRole === "read_only";
   const closedPeriod = isDateInClosedPeriod(transaction.transaction_date, person.managementPeriods);

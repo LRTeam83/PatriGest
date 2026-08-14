@@ -10,6 +10,22 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.3.6",
+    date: "2026-08-14",
+    title: "Référentiel officiel des catégories",
+    summary: "Alignement des catégories de ressources et dépenses sur le modèle officiel du compte de gestion, avec rattachement des catégories personnelles et reclassement des opérations existantes.",
+    changes: [
+      "Référentiel structuré de 56 catégories officielles de ressources et dépenses",
+      "Codes métier stables RES-* et DEP-* pour les futurs comptes de gestion",
+      "Rattachement obligatoire des nouvelles catégories personnelles à une catégorie officielle compatible",
+      "Présentation distincte et structurée des catégories officielles et personnelles",
+      "Suggestion locale et déterministe du rattachement officiel",
+      "Reclassement des opérations existantes vers le référentiel officiel",
+      "Suppression des anciennes catégories système PatriGest",
+      "Préparation du classement réglementaire des mouvements vers les placements sans modifier leur nature de virement",
+    ],
+  },
+  {
     version: "0.3.5",
     date: "2026-08-13",
     title: "Suppressions contrôlées et nettoyage",
