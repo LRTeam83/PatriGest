@@ -11,9 +11,10 @@ type AppConfirmDialogProps = {
   children?: React.ReactNode;
   actions: React.ReactNode;
   onClose: () => void;
+  size?: "default" | "wide";
 };
 
-export function AppConfirmDialog({ open, title, description, subject, children, actions, onClose }: AppConfirmDialogProps) {
+export function AppConfirmDialog({ open, title, description, subject, children, actions, onClose, size = "default" }: AppConfirmDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
@@ -36,7 +37,7 @@ export function AppConfirmDialog({ open, title, description, subject, children, 
       ref={dialogRef}
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
-      className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-2xl border border-[#E2E8F0] bg-white p-0 text-[#0F172A] shadow-2xl backdrop:bg-slate-950/45"
+      className={`m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] ${size === "wide" ? "max-w-3xl" : "max-w-md"} overflow-y-auto rounded-2xl border border-[#E2E8F0] bg-white p-0 text-[#0F172A] shadow-2xl backdrop:bg-slate-950/45`}
       onCancel={(event) => { event.preventDefault(); onClose(); }}
       onClose={onClose}
     >

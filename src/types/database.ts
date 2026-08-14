@@ -1,13 +1,15 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 type ProtectedPersonStatus = "active" | "archived";
-type MeasureType =
+export type MeasureType =
   | "safeguard_of_justice"
+  | "safeguard_with_special_mandate"
   | "simple_curatorship"
   | "reinforced_curatorship"
   | "guardianship"
   | "future_protection_mandate"
-  | "family_authorization";
+  | "family_authorization"
+  | "judicial_support_measure";
 type ManagementPeriodStatus = "open" | "closed";
 export type FinancialAccountType = "checking" | "livret_a" | "ldds" | "csl" | "lep" | "pel" | "term_account" | "life_insurance" | "other_investment";
 type FinancialAccountStatus = "active" | "closed";
@@ -32,6 +34,8 @@ export type Database = {
           birth_name: string | null; birth_date: string | null; birth_place: string | null;
           address_line1: string | null; address_line2: string | null; postal_code: string | null;
           city: string | null; country: string; phone: string | null; email: string | null;
+          residence_address_line1: string | null; residence_address_line2: string | null;
+          residence_postal_code: string | null; residence_city: string | null; residence_country: string | null;
           notes: string | null; status: ProtectedPersonStatus; created_at: string;
           updated_at: string; archived_at: string | null;
         };
@@ -40,6 +44,8 @@ export type Database = {
           birth_name?: string | null; birth_date?: string | null; birth_place?: string | null;
           address_line1?: string | null; address_line2?: string | null; postal_code?: string | null;
           city?: string | null; country?: string; phone?: string | null; email?: string | null;
+          residence_address_line1?: string | null; residence_address_line2?: string | null;
+          residence_postal_code?: string | null; residence_city?: string | null; residence_country?: string | null;
           notes?: string | null; status?: ProtectedPersonStatus; created_at?: string;
           updated_at?: string; archived_at?: string | null;
         };
@@ -51,14 +57,26 @@ export type Database = {
           id: string; protected_person_id: string; measure_type: MeasureType;
           start_date: string | null; end_date: string | null; decision_date: string | null;
           court_name: string | null; court_city: string | null; case_reference: string | null;
+          court_cabinet: string | null;
           judge_name: string | null; notary_name: string | null; notes: string | null;
+          representative_first_name: string | null; representative_last_name: string | null;
+          representative_appointment_date: string | null;
+          representative_address_line1: string | null; representative_address_line2: string | null;
+          representative_postal_code: string | null; representative_city: string | null;
+          representative_country: string | null; representative_phone: string | null; representative_email: string | null;
           active: boolean; created_at: string; updated_at: string;
         };
         Insert: {
           id?: string; protected_person_id: string; measure_type: MeasureType;
           start_date?: string | null; end_date?: string | null; decision_date?: string | null;
           court_name?: string | null; court_city?: string | null; case_reference?: string | null;
+          court_cabinet?: string | null;
           judge_name?: string | null; notary_name?: string | null; notes?: string | null;
+          representative_first_name?: string | null; representative_last_name?: string | null;
+          representative_appointment_date?: string | null;
+          representative_address_line1?: string | null; representative_address_line2?: string | null;
+          representative_postal_code?: string | null; representative_city?: string | null;
+          representative_country?: string | null; representative_phone?: string | null; representative_email?: string | null;
           active?: boolean; created_at?: string; updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["protection_measures"]["Insert"]>;

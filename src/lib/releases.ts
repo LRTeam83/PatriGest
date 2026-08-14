@@ -10,6 +10,22 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.3.7",
+    date: "2026-08-14",
+    title: "Données réglementaires du dossier",
+    summary: `${APP_NAME} complète les informations réglementaires de la personne protégée et de sa mesure de protection afin de préparer les futurs comptes de gestion.`,
+    changes: [
+      "Gestion du domicile et d’une résidence distincte",
+      "Informations judiciaires avec numéro RG et cabinet",
+      "Identification de la personne en charge de la mesure",
+      "Date de nomination et coordonnées de la personne en charge",
+      "Nouveaux types de mesure réglementaires",
+      "Indicateurs de complétude du dossier",
+      "Guidage visuel des champs restant à renseigner",
+      "Traitement adapté du mandat de protection future",
+    ],
+  },
+  {
     version: "0.3.6",
     date: "2026-08-14",
     title: "Référentiel officiel des catégories",

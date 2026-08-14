@@ -59,10 +59,19 @@ export async function createProtectedPerson(input: ProtectedPersonInput) {
       last_name: input.lastName,
       birth_name: input.birthName,
       birth_date: input.birthDate,
+      birth_place: input.birthPlace,
       address_line1: input.addressLine1,
       address_line2: input.addressLine2,
       postal_code: input.postalCode,
       city: input.city,
+      country: input.country ?? "France",
+      phone: input.phone,
+      email: input.email,
+      residence_address_line1: input.residenceAddressLine1,
+      residence_address_line2: input.residenceAddressLine2,
+      residence_postal_code: input.residencePostalCode,
+      residence_city: input.residenceCity,
+      residence_country: input.residenceCountry,
     })
     .select("*")
     .single();
@@ -80,10 +89,19 @@ export async function updateProtectedPerson(id: string, input: ProtectedPersonIn
       last_name: input.lastName,
       birth_name: input.birthName,
       birth_date: input.birthDate,
+      birth_place: input.birthPlace,
       address_line1: input.addressLine1,
       address_line2: input.addressLine2,
       postal_code: input.postalCode,
       city: input.city,
+      country: input.country ?? "France",
+      phone: input.phone,
+      email: input.email,
+      residence_address_line1: input.residenceAddressLine1,
+      residence_address_line2: input.residenceAddressLine2,
+      residence_postal_code: input.residencePostalCode,
+      residence_city: input.residenceCity,
+      residence_country: input.residenceCountry,
     })
     .eq("id", id)
     .select("*")
@@ -112,10 +130,49 @@ export async function createProtectionMeasure(protectedPersonId: string, input: 
     measure_type: input.measureType,
     start_date: input.startDate,
     decision_date: input.decisionDate,
+    case_reference: input.caseReference,
+    court_cabinet: input.courtCabinet,
+    court_name: input.courtName,
+    court_city: input.courtCity,
+    representative_first_name: input.representativeFirstName,
+    representative_last_name: input.representativeLastName,
+    representative_appointment_date: input.representativeAppointmentDate,
+    representative_address_line1: input.representativeAddressLine1,
+    representative_address_line2: input.representativeAddressLine2,
+    representative_postal_code: input.representativePostalCode,
+    representative_city: input.representativeCity,
+    representative_country: input.representativeCountry,
+    representative_phone: input.representativePhone,
+    representative_email: input.representativeEmail,
     active: true,
   }).select("*").single();
 
   if (error) throw new Error("Impossible d’ajouter la mesure.");
+  return data;
+}
+
+export async function updateProtectionMeasure(protectedPersonId: string, measureId: string, input: ProtectionMeasureInput) {
+  const { supabase } = await getAuthenticatedUser();
+  const { data, error } = await supabase.from("protection_measures").update({
+    measure_type: input.measureType,
+    start_date: input.startDate,
+    decision_date: input.decisionDate,
+    case_reference: input.caseReference,
+    court_cabinet: input.courtCabinet,
+    court_name: input.courtName,
+    court_city: input.courtCity,
+    representative_first_name: input.representativeFirstName,
+    representative_last_name: input.representativeLastName,
+    representative_appointment_date: input.representativeAppointmentDate,
+    representative_address_line1: input.representativeAddressLine1,
+    representative_address_line2: input.representativeAddressLine2,
+    representative_postal_code: input.representativePostalCode,
+    representative_city: input.representativeCity,
+    representative_country: input.representativeCountry,
+    representative_phone: input.representativePhone,
+    representative_email: input.representativeEmail,
+  }).eq("id", measureId).eq("protected_person_id", protectedPersonId).select("*").maybeSingle();
+  if (error || !data) throw new Error("Mesure de protection introuvable.");
   return data;
 }
 
