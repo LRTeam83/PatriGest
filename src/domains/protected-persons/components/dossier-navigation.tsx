@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeftRight, CalendarRange, LayoutGrid, WalletCards } from "lucide-react";
 
-export function DossierNavigation({ protectedPersonId, current }: { protectedPersonId: string; current: "overview" | "measure" | "accounts" | "operations" | "periods" }) {
+export function DossierNavigation({ protectedPersonId, current }: { protectedPersonId: string; current: "overview" | "measure" | "accounts" | "operations" | "periods" | "properties" | "debts" }) {
   const items = [
     { key: "accounts", label: "Comptes et patrimoine", href: `/dossiers/${protectedPersonId}/comptes`, icon: WalletCards },
     { key: "operations", label: "Opérations", href: `/dossiers/${protectedPersonId}/operations`, icon: ArrowLeftRight },

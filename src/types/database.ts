@@ -18,6 +18,12 @@ export type TransactionType = "income" | "expense" | "transfer_in" | "transfer_o
 export type DossierAccessRole = "owner" | "manager" | "read_only";
 type SharedAccessRole = Exclude<DossierAccessRole, "owner">;
 type AccountRequestStatus = "pending" | "approved" | "rejected";
+export type PropertyType = "house" | "apartment" | "land" | "commercial" | "other";
+export type PropertyEntryMode = "acquisition" | "inheritance" | "donation" | "other";
+export type PropertyStatus = "active" | "disposed";
+export type PropertyEventType = "acquisition" | "sale" | "inheritance" | "donation" | "significant_change";
+export type DebtType = "bank_loan" | "tax_debt" | "institution_debt" | "personal_debt" | "other";
+export type DebtStatus = "active" | "settled";
 
 export type Database = {
   public: {
@@ -180,6 +186,30 @@ export type Database = {
         Update: { file_name?: string; mime_type?: string; file_size?: number; created_by?: string; updated_at?: string };
         Relationships: [];
       };
+      real_estate_properties: {
+        Row: { id: string; protected_person_id: string; property_type: PropertyType; designation: string; address_line1: string | null; address_line2: string | null; postal_code: string | null; city: string | null; country: string; entry_date: string | null; entry_mode: PropertyEntryMode | null; estimated_value: number | null; valuation_date: string | null; status: PropertyStatus; disposal_date: string | null; notes: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; protected_person_id: string; property_type: PropertyType; designation: string; address_line1?: string | null; address_line2?: string | null; postal_code?: string | null; city?: string | null; country?: string; entry_date?: string | null; entry_mode?: PropertyEntryMode | null; estimated_value?: number | null; valuation_date?: string | null; status?: PropertyStatus; disposal_date?: string | null; notes?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["real_estate_properties"]["Insert"]>;
+        Relationships: [];
+      };
+      property_events: {
+        Row: { id: string; property_id: string; protected_person_id: string; event_type: PropertyEventType; event_date: string; description: string; amount: number | null; document_reference: string | null; created_at: string };
+        Insert: { id?: string; property_id: string; protected_person_id: string; event_type: PropertyEventType; event_date: string; description: string; amount?: number | null; document_reference?: string | null; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["property_events"]["Insert"]>;
+        Relationships: [];
+      };
+      debts: {
+        Row: { id: string; protected_person_id: string; creditor: string; debt_type: DebtType; designation: string; start_date: string | null; initial_amount: number | null; initial_duration_months: number | null; monthly_payment: number | null; interest_rate: number | null; current_balance: number | null; current_balance_date: string | null; remaining_duration_months: number | null; status: DebtStatus; settled_at: string | null; notes: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; protected_person_id: string; creditor: string; debt_type: DebtType; designation: string; start_date?: string | null; initial_amount?: number | null; initial_duration_months?: number | null; monthly_payment?: number | null; interest_rate?: number | null; current_balance?: number | null; current_balance_date?: string | null; remaining_duration_months?: number | null; status?: DebtStatus; settled_at?: string | null; notes?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["debts"]["Insert"]>;
+        Relationships: [];
+      };
+      debt_balances: {
+        Row: { id: string; debt_id: string; balance_date: string; remaining_balance: number; remaining_duration_months: number | null; created_at: string };
+        Insert: { id?: string; debt_id: string; balance_date: string; remaining_balance: number; remaining_duration_months?: number | null; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["debt_balances"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -211,3 +241,7 @@ export type Transfer = Database["public"]["Tables"]["transfers"]["Row"];
 export type AccountRequest = Database["public"]["Tables"]["account_requests"]["Row"];
 export type ProtectedPersonAccess = Database["public"]["Tables"]["protected_person_access"]["Row"];
 export type ProtectedPersonInvitation = Database["public"]["Tables"]["protected_person_invitations"]["Row"];
+export type RealEstateProperty = Database["public"]["Tables"]["real_estate_properties"]["Row"];
+export type PropertyEvent = Database["public"]["Tables"]["property_events"]["Row"];
+export type Debt = Database["public"]["Tables"]["debts"]["Row"];
+export type DebtBalance = Database["public"]["Tables"]["debt_balances"]["Row"];

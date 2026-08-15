@@ -10,6 +10,22 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.3.8",
+    date: "2026-08-15",
+    title: "Patrimoine immobilier et dettes",
+    summary: `${APP_NAME} permet désormais de suivre les biens immobiliers, leurs événements significatifs, les dettes et l'historique daté de leur solde restant, en préparation des futurs comptes de gestion.`,
+    changes: [
+      "Gestion des biens immobiliers avec statut actif ou cédé",
+      "Historique des événements immobiliers",
+      "Fiche de consultation détaillée de chaque bien",
+      "Gestion des dettes et emprunts",
+      "Situations datées du solde restant des dettes",
+      "Résumé courant synchronisé sur la situation la plus récente",
+      "Prise en charge des saisies rétroactives",
+      "Accès adaptés aux rôles Propriétaire, Gestionnaire et Lecture seule",
+    ],
+  },
+  {
     version: "0.3.7",
     date: "2026-08-14",
     title: "Données réglementaires du dossier",
