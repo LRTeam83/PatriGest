@@ -78,7 +78,7 @@ export async function deleteFinancialAccount(accountId: string, protectedPersonI
   if (account.protected_person_id !== protectedPersonId) throw new Error("Compte introuvable.");
   const { error } = await supabase.rpc("delete_empty_financial_account", { p_account_id: accountId });
   if (error) {
-    if (error.message.includes("contient des opérations")) throw new Error("Ce compte ne peut pas être supprimé tant qu’il contient des opérations, virements, valorisations ou justificatifs.");
+    if (error.message.includes("contient des opérations")) throw new Error("Ce compte ne peut pas être supprimé tant qu’il contient des opérations, virements, valorisations, justificatifs ou relevés bancaires.");
     throw new Error("Impossible de supprimer ce compte.");
   }
 }

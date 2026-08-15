@@ -10,6 +10,22 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.3.9",
+    date: "2026-08-15",
+    title: "Relevés bancaires sécurisés",
+    summary: `${APP_NAME} permet désormais d’archiver les relevés bancaires et documents de situation directement sur chaque compte, dans un stockage privé sécurisé, en préparation des futurs comptes de gestion.`,
+    changes: [
+      "Relevés rattachés directement aux comptes financiers",
+      "Documents PDF privés limités à 10 Mo",
+      "Consultation et téléchargement sécurisés",
+      "Remplacement et suppression contrôlés des relevés",
+      "Prise en charge des comptes courants, livrets, assurances-vie et autres placements",
+      "Conservation indépendante des valorisations des placements",
+      "Recherche du dernier relevé disponible à une date donnée",
+      "Blocage de la suppression d’un compte tant qu’un relevé subsiste",
+    ],
+  },
+  {
     version: "0.3.8",
     date: "2026-08-15",
     title: "Patrimoine immobilier et dettes",

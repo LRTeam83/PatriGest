@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeftRight, Info, Plus } from "lucide-react";
+import { ArrowLeftRight, FileText, Info, Plus } from "lucide-react";
 import { z } from "zod";
 import { PrivateShell } from "@/components/layout/private-shell";
 import { AppBreadcrumb } from "@/components/ui/app-breadcrumb";
@@ -133,6 +133,13 @@ export default async function AccountOperationsPage({
               </Link>
             </>
           )}
+          <Link
+            href={`/dossiers/${protectedPersonId}/comptes/${accountId}/releves`}
+            className="button button-secondary min-h-8 gap-1.5 px-2.5 text-xs"
+          >
+            <FileText size={14} />
+            Relevés
+          </Link>
           <Link
             href={`/dossiers/${protectedPersonId}/comptes/${accountId}`}
             className="button button-secondary min-h-8 gap-1.5 px-2.5 text-xs"

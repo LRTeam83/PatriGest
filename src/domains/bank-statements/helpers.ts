@@ -1,0 +1,5 @@
+export const MAX_BANK_STATEMENT_SIZE=10*1024*1024;
+export function detectPdf(bytes:Uint8Array){return bytes.length>=5&&String.fromCharCode(...bytes.slice(0,5))==="%PDF-";}
+export function bankStatementStoragePath(personId:string,accountId:string,statementId:string){return `protected-persons/${personId}/accounts/${accountId}/statements/${statementId}/statement`;}
+export function bankStatementDownloadName(endDate:string,institution:string,reference:string|null){const safe=(value:string)=>value.normalize("NFKC").replace(/[<>:"/\\|?*\u0000-\u001F]/g," ").replace(/\s+/g," ").trim();const ref=reference?safe(reference).slice(-4):"";return `${endDate} - ${safe(institution)||"Relevé bancaire"}${ref?` - ${ref}`:""}.pdf`;}
+export function bankStatementContentDisposition(name:string){const fallback=name.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^\x20-\x7E]/g,"_").replace(/["\\]/g,"_");const encoded=encodeURIComponent(name).replace(/['()*]/g,character=>`%${character.charCodeAt(0).toString(16).toUpperCase()}`);return `attachment; filename="${fallback}"; filename*=UTF-8''${encoded}`;}

@@ -210,6 +210,12 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["debt_balances"]["Insert"]>;
         Relationships: [];
       };
+      bank_statements: {
+        Row: { id: string; financial_account_id: string; statement_start_date: string | null; statement_end_date: string; statement_balance: number | null; storage_path: string; original_file_name: string; mime_type: string; file_size: number; note: string | null; created_by: string; created_at: string; updated_at: string };
+        Insert: { id?: string; financial_account_id: string; statement_start_date?: string | null; statement_end_date: string; statement_balance?: number | null; storage_path: string; original_file_name: string; mime_type: string; file_size: number; note?: string | null; created_by: string; created_at?: string; updated_at?: string };
+        Update: { statement_start_date?: string | null; statement_end_date?: string; statement_balance?: number | null; original_file_name?: string; mime_type?: string; file_size?: number; note?: string | null; updated_at?: string };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -245,3 +251,4 @@ export type RealEstateProperty = Database["public"]["Tables"]["real_estate_prope
 export type PropertyEvent = Database["public"]["Tables"]["property_events"]["Row"];
 export type Debt = Database["public"]["Tables"]["debts"]["Row"];
 export type DebtBalance = Database["public"]["Tables"]["debt_balances"]["Row"];
+export type BankStatement = Database["public"]["Tables"]["bank_statements"]["Row"];
