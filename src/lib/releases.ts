@@ -10,6 +10,16 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.4.1",
+    date: "2026-08-16",
+    title: "Maintenance des dépendances",
+    summary: "Mise à jour de sécurité ciblée des dépendances techniques de PatriGest, sans modification fonctionnelle.",
+    changes: [
+      "Mise à jour ciblée d’une dépendance technique transitive",
+      "Suppression de la vulnérabilité signalée par l’audit npm",
+    ],
+  },
+  {
     version: "0.4.0",
     date: "2026-08-16",
     title: "Comptes de gestion réglementaires",
