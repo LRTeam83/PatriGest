@@ -16,13 +16,15 @@ export async function getDashboardData() {
   if (profileError || personsError) throw new Error("Impossible de charger le tableau de bord.");
 
   const personIds = persons.map((person) => person.id);
-  if (!personIds.length) return { firstName: profile?.first_name ?? null, activeDossiers: 0, activeAccounts: 0, currentPatrimony: 0, upcomingPeriods: [] as ManagementPeriod[], recentTransactions: [] as DashboardTransaction[] };
+  if (!personIds.length) return { firstName: profile?.first_name ?? null, activeDossiers: 0, activeAccounts: 0, currentPatrimony: 0, upcomingPeriods: [] as ManagementPeriod[], pendingReportPeriods: [] as ManagementPeriod[], recentTransactions: [] as DashboardTransaction[] };
 
-  const [{ data: accounts, error: accountsError }, { data: periods, error: periodsError }] = await Promise.all([
+  const [{ data: accounts, error: accountsError }, { data: periods, error: periodsError }, { data: closedPeriods, error: closedPeriodsError }, { data: reports, error: reportsError }] = await Promise.all([
     supabase.from("financial_accounts").select("*").in("protected_person_id", personIds),
     supabase.from("management_periods").select("*").in("protected_person_id", personIds).eq("status", "open").order("end_date", { ascending: true }),
+    supabase.from("management_periods").select("*").in("protected_person_id", personIds).eq("status", "closed").order("end_date", { ascending: false }),
+    supabase.from("management_reports").select("management_period_id").in("protected_person_id", personIds),
   ]);
-  if (accountsError || periodsError) throw new Error("Impossible de charger le tableau de bord.");
+  if (accountsError || periodsError || closedPeriodsError || reportsError) throw new Error("Impossible de charger le tableau de bord.");
 
   const accountIds = accounts.map((account) => account.id);
   const [{ data: valuations, error: valuationsError }, { data: transactions, error: transactionsError }] = accountIds.length ? await Promise.all([
@@ -46,6 +48,7 @@ export async function getDashboardData() {
     activeAccounts: accounts.filter((account) => account.status === "active").length,
     currentPatrimony: getCurrentPatrimonyValue(patrimonyAccounts),
     upcomingPeriods: periods,
+    pendingReportPeriods: closedPeriods.filter((period) => !reports.some((report) => report.management_period_id === period.id)),
     recentTransactions,
   };
 }

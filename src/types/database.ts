@@ -24,6 +24,8 @@ export type PropertyStatus = "active" | "disposed";
 export type PropertyEventType = "acquisition" | "sale" | "inheritance" | "donation" | "significant_change";
 export type DebtType = "bank_loan" | "tax_debt" | "institution_debt" | "personal_debt" | "other";
 export type DebtStatus = "active" | "settled";
+export type ManagementReportStatus = "draft" | "ready" | "generated" | "finalized" | "transmitted" | "approved" | "difficulty";
+export type ManagementReportDocumentType = "management_report_draft" | "management_report" | "approval_certificate" | "difficulty_report";
 
 export type Database = {
   public: {
@@ -216,6 +218,18 @@ export type Database = {
         Update: { statement_start_date?: string | null; statement_end_date?: string; statement_balance?: number | null; original_file_name?: string; mime_type?: string; file_size?: number; note?: string | null; updated_at?: string };
         Relationships: [];
       };
+      management_reports: {
+        Row: { id: string; protected_person_id: string; management_period_id: string | null; report_year: number; period_start: string; period_end: string; status: ManagementReportStatus; residence_changed: boolean | null; representative_address_changed: boolean | null; real_estate_confirmed: boolean | null; financial_investments_confirmed: boolean | null; observations: string | null; signature_place: string | null; generated_at: string | null; finalized_at: string | null; transmitted_at: string | null; approved_at: string | null; difficulty_reported_at: string | null; created_by: string; created_at: string; updated_at: string };
+        Insert: { id?: string; protected_person_id: string; management_period_id?: string | null; report_year: number; period_start: string; period_end: string; status?: ManagementReportStatus; residence_changed?: boolean | null; representative_address_changed?: boolean | null; real_estate_confirmed?: boolean | null; financial_investments_confirmed?: boolean | null; observations?: string | null; signature_place?: string | null; generated_at?: string | null; finalized_at?: string | null; transmitted_at?: string | null; approved_at?: string | null; difficulty_reported_at?: string | null; created_by: string; created_at?: string; updated_at?: string };
+        Update: { status?: ManagementReportStatus; residence_changed?: boolean | null; representative_address_changed?: boolean | null; real_estate_confirmed?: boolean | null; financial_investments_confirmed?: boolean | null; observations?: string | null; signature_place?: string | null; generated_at?: string | null; finalized_at?: string | null; transmitted_at?: string | null; approved_at?: string | null; difficulty_reported_at?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      management_report_documents: {
+        Row: { id: string; management_report_id: string; document_type: ManagementReportDocumentType; storage_path: string; file_name: string; mime_type: string; file_size: number; generated_by: string; created_at: string };
+        Insert: { id?: string; management_report_id: string; document_type: ManagementReportDocumentType; storage_path: string; file_name: string; mime_type?: string; file_size: number; generated_by: string; created_at?: string };
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -229,6 +243,9 @@ export type Database = {
       delete_empty_financial_account: { Args: { p_account_id: string }; Returns: undefined };
       delete_empty_protected_person: { Args: { p_protected_person_id: string }; Returns: undefined };
       delete_transaction_with_document: { Args: { p_transaction_id: string }; Returns: undefined };
+      finalize_management_report_draft_generation: { Args: { p_report_id: string; p_storage_path: string; p_file_name: string; p_mime_type: string; p_file_size: number }; Returns: string };
+      resume_management_report_preparation: { Args: { p_report_id: string }; Returns: undefined };
+      finalize_management_report: { Args: { p_report_id: string; p_storage_path: string; p_file_name: string; p_mime_type: string; p_file_size: number }; Returns: string };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
@@ -252,3 +269,5 @@ export type PropertyEvent = Database["public"]["Tables"]["property_events"]["Row
 export type Debt = Database["public"]["Tables"]["debts"]["Row"];
 export type DebtBalance = Database["public"]["Tables"]["debt_balances"]["Row"];
 export type BankStatement = Database["public"]["Tables"]["bank_statements"]["Row"];
+export type ManagementReport = Database["public"]["Tables"]["management_reports"]["Row"];
+export type ManagementReportDocument = Database["public"]["Tables"]["management_report_documents"]["Row"];

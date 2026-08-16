@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeftRight, CalendarRange, FolderCog, FolderOpen, History, LayoutDashboard, LayoutGrid, LogOut, Menu, Settings, ShieldCheck, Users, WalletCards, X, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, CalendarRange, ClipboardList, FolderCog, FolderOpen, History, LayoutDashboard, LayoutGrid, LogOut, Menu, Settings, ShieldCheck, Users, WalletCards, X, type LucideIcon } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/actions";
 import { APP_NAME, APP_VERSION } from "@/lib/app";
 
 export type PrivateSection = "dashboard" | "dossiers" | "dossier-management" | "settings" | "administration" | "administration-requests" | "administration-users" | "history";
-export type DossierSection = "overview" | "accounts" | "operations" | "periods" | "access" | "properties" | "debts";
+export type DossierSection = "overview" | "accounts" | "operations" | "periods" | "access" | "properties" | "debts" | "reports";
 export type PrivateDossierContext = { id: string; name: string; current: DossierSection; accessRole?: "owner" | "manager" | "read_only" };
 type NavigationItem = { label: string; href: string; icon: LucideIcon; active: boolean };
 
@@ -29,6 +29,7 @@ export function PrivateNavigation({ current, dossier, isPlatformAdmin = false }:
     { label: "Comptes et patrimoine", href: `/dossiers/${dossier.id}/comptes`, icon: WalletCards, active: dossier.current === "accounts" },
     { label: "Opérations", href: `/dossiers/${dossier.id}/operations`, icon: ArrowLeftRight, active: dossier.current === "operations" },
     { label: "Exercices de gestion", href: `/dossiers/${dossier.id}/exercices`, icon: CalendarRange, active: dossier.current === "periods" },
+    { label: "Comptes de gestion", href: `/dossiers/${dossier.id}/comptes-de-gestion`, icon: ClipboardList, active: dossier.current === "reports" },
     { label: "Informations du dossier", href: `/dossiers/${dossier.id}`, icon: LayoutGrid, active: dossier.current === "overview" },
     ...(dossier.accessRole === "owner" ? [{ label: "Accès au dossier", href: `/dossiers/${dossier.id}/acces`, icon: Users, active: dossier.current === "access" }] : []),
   ] : [];

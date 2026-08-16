@@ -10,6 +10,25 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.4.0",
+    date: "2026-08-16",
+    title: "Comptes de gestion réglementaires",
+    summary: `${APP_NAME} prépare désormais le compte de gestion annuel à partir des données du dossier, contrôle sa complétude, calcule les ressources et dépenses selon le référentiel officiel, produit un aperçu réglementaire puis génère un PDF projet révisable avant finalisation du document officiel.`,
+    changes: [
+      "Création de comptes de gestion annuels sur une période réglementaire",
+      "Contrôle progressif de la complétude du compte de gestion",
+      "Prise en compte des données réglementaires de la personne et de la mesure",
+      "Référentiel officiel de 18 ressources et 38 dépenses",
+      "Rattachement des catégories personnelles aux catégories officielles",
+      "Intégration des comptes, placements, relevés, biens immobiliers et dettes",
+      "Aperçu réglementaire avant génération documentaire",
+      "PDF projet révisable avec filigrane PROJET",
+      "Reprise de la préparation possible tant que le document n’est pas finalisé",
+      "PDF final sans filigrane et archivage dans un stockage privé",
+      "Finalisation irréversible du document dans le flux normal",
+    ],
+  },
+  {
     version: "0.3.9",
     date: "2026-08-15",
     title: "Relevés bancaires sécurisés",
