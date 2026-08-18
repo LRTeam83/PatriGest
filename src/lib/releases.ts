@@ -10,6 +10,21 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.4.2",
+    date: "2026-08-18",
+    title: "Transmission des comptes de gestion",
+    summary: `${APP_NAME} permet désormais d’enregistrer la transmission d’un compte de gestion finalisé, avec date, mode, destinataire et note, tout en conservant le document officiel définitivement figé.`,
+    changes: [
+      "Déclaration de la transmission d’un compte de gestion finalisé",
+      "Date métier et mode de transmission",
+      "Destinataire et note facultative",
+      "Nouveau statut Transmis",
+      "Correction contrôlée des métadonnées de transmission",
+      "Conservation du PDF officiel sans modification",
+      "Droits adaptés aux rôles Propriétaire, Gestionnaire et Lecture seule",
+    ],
+  },
+  {
     version: "0.4.1",
     date: "2026-08-16",
     title: "Maintenance des dépendances",

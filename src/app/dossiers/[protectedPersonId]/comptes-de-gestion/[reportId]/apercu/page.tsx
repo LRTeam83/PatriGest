@@ -27,6 +27,6 @@ export default async function Page({
       <Link className="button button-secondary" href={reportHref}>Retour à la préparation</Link>
     </div>
     <div className="print:hidden"><DossierNavigation protectedPersonId={protectedPersonId} current="reports" /></div>
-    {["ready", "generated", "finalized"].includes(preview.report.status) ? <ManagementReportPreviewView preview={preview} /> : <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4"><h2 className="font-bold text-amber-900">Aperçu indisponible</h2><p className="mt-1 text-sm text-amber-800">Le compte de gestion doit être marqué comme prêt avant de présenter son aperçu réglementaire.</p><Link className="button button-secondary mt-3" href={reportHref}>Revenir à la préparation</Link></div>}
+    {["ready", "generated", "finalized", "transmitted"].includes(preview.report.status) ? <ManagementReportPreviewView preview={preview} /> : <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4"><h2 className="font-bold text-amber-900">Aperçu indisponible</h2><p className="mt-1 text-sm text-amber-800">Le compte de gestion doit être marqué comme prêt avant de présenter son aperçu réglementaire.</p><Link className="button button-secondary mt-3" href={reportHref}>Revenir à la préparation</Link></div>}
   </PrivateShell>;
 }

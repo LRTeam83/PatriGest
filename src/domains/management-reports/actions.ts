@@ -1,8 +1,10 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getAuthenticatedUser } from "@/domains/protected-persons/services/authenticated-user";
 import {
   managementReportCreateSchema,
+  managementReportTransmissionSchema,
   managementReportUpdateSchema,
 } from "./schemas";
 import {
@@ -52,6 +54,40 @@ export async function updateManagementReportAction(
     signature_place: parsed.data.signaturePlace,
   });
   revalidatePath(`/dossiers/${personId}/comptes-de-gestion/${reportId}`);
+}
+
+export async function declareManagementReportTransmissionAction(
+  personId: string,
+  reportId: string,
+  previousState: ManagementReportStatusActionState,
+  formData: FormData,
+): Promise<ManagementReportStatusActionState> {
+  void previousState;
+  const parsed = managementReportTransmissionSchema.safeParse({
+    transmissionDate: formData.get("transmissionDate"),
+    transmissionMethod: formData.get("transmissionMethod"),
+    recipient: formData.get("recipient"),
+    note: formData.get("note"),
+  });
+  if (!parsed.success)
+    return { status: "error", message: "Vérifiez les informations de transmission." };
+  try {
+    const { supabase } = await getAuthenticatedUser();
+    const { error } = await supabase.rpc("declare_management_report_transmission", {
+      p_report_id: reportId,
+      p_transmission_date: parsed.data.transmissionDate,
+      p_transmission_method: parsed.data.transmissionMethod,
+      p_recipient: parsed.data.recipient,
+      p_note: parsed.data.note,
+    });
+    if (error) {
+      return { status: "error", message: "Impossible d’enregistrer la transmission." };
+    }
+    revalidatePath(`/dossiers/${personId}/comptes-de-gestion/${reportId}`);
+    return { status: "success", message: "La transmission a été enregistrée." };
+  } catch {
+    return { status: "error", message: "Impossible d’enregistrer la transmission." };
+  }
 }
 
 async function getManageableSnapshot(personId: string, reportId: string) {

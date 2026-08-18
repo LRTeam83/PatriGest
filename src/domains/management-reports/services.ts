@@ -134,6 +134,13 @@ export async function getManagementReportSnapshot(
   ]);
   if (result.error || !result.data || !person) return null;
   const report = result.data;
+  const transmissionResult = await supabase
+    .from("management_report_transmissions")
+    .select("*")
+    .eq("management_report_id", report.id)
+    .maybeSingle();
+  if (transmissionResult.error)
+    throw new Error("Impossible de charger la transmission du compte de gestion.");
   const accountIds = accounts.map((account) => account.id);
   const empty = { data: [], error: null };
   const [categoryResult, transactionResult, latestStatements] =
@@ -284,6 +291,7 @@ export async function getManagementReportSnapshot(
   ];
   return {
     report,
+    reportTransmission: transmissionResult.data,
     person,
     properties,
     propertyEvents,

@@ -26,6 +26,7 @@ export type DebtType = "bank_loan" | "tax_debt" | "institution_debt" | "personal
 export type DebtStatus = "active" | "settled";
 export type ManagementReportStatus = "draft" | "ready" | "generated" | "finalized" | "transmitted" | "approved" | "difficulty";
 export type ManagementReportDocumentType = "management_report_draft" | "management_report" | "approval_certificate" | "difficulty_report";
+export type ManagementReportTransmissionMethod = "postal_mail" | "hand_delivery" | "email" | "external_platform" | "other";
 
 export type Database = {
   public: {
@@ -230,6 +231,12 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      management_report_transmissions: {
+        Row: { id: string; management_report_id: string; transmission_date: string; transmission_method: ManagementReportTransmissionMethod; recipient: string; note: string | null; declared_by: string; created_at: string; updated_at: string };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -246,6 +253,7 @@ export type Database = {
       finalize_management_report_draft_generation: { Args: { p_report_id: string; p_storage_path: string; p_file_name: string; p_mime_type: string; p_file_size: number }; Returns: string };
       resume_management_report_preparation: { Args: { p_report_id: string }; Returns: undefined };
       finalize_management_report: { Args: { p_report_id: string; p_storage_path: string; p_file_name: string; p_mime_type: string; p_file_size: number }; Returns: string };
+      declare_management_report_transmission: { Args: { p_report_id: string; p_transmission_date: string; p_transmission_method: string; p_recipient: string; p_note?: string | null }; Returns: string };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
@@ -271,3 +279,4 @@ export type DebtBalance = Database["public"]["Tables"]["debt_balances"]["Row"];
 export type BankStatement = Database["public"]["Tables"]["bank_statements"]["Row"];
 export type ManagementReport = Database["public"]["Tables"]["management_reports"]["Row"];
 export type ManagementReportDocument = Database["public"]["Tables"]["management_report_documents"]["Row"];
+export type ManagementReportTransmission = Database["public"]["Tables"]["management_report_transmissions"]["Row"];

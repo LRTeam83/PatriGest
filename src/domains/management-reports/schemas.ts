@@ -32,3 +32,16 @@ export const managementReportUpdateSchema = z.object({
     .max(255)
     .transform((value) => value || null),
 });
+
+export const managementReportTransmissionSchema = z.object({
+  transmissionDate: z.iso.date(),
+  transmissionMethod: z.enum([
+    "postal_mail",
+    "hand_delivery",
+    "email",
+    "external_platform",
+    "other",
+  ]),
+  recipient: z.string().trim().min(1).max(500),
+  note: z.string().trim().max(5000).transform((value) => value || null),
+});

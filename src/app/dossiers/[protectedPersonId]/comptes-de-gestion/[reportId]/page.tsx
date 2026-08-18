@@ -6,6 +6,7 @@ import { AppBreadcrumb } from "@/components/ui/app-breadcrumb";
 import { DossierNavigation } from "@/domains/protected-persons/components/dossier-navigation";
 import { ManagementReportDashboard } from "@/domains/management-reports/components";
 import { ReportDocumentActions } from "@/domains/management-reports/report-document-actions";
+import { ReportTransmission } from "@/domains/management-reports/report-transmission";
 import { getManagementReportDocument, getManagementReportSnapshot } from "@/domains/management-reports/services";
 import { formatFinancialDate } from "@/domains/financial-accounts/utils/financial-account-utils";
 export const dynamic = "force-dynamic";
@@ -27,13 +28,15 @@ export default async function Page({
   const person = snapshot.person;
   const documentType = snapshot.report.status === "generated"
     ? "management_report_draft" as const
-    : snapshot.report.status === "finalized"
+    : ["finalized", "transmitted"].includes(snapshot.report.status)
       ? "management_report" as const
       : null;
   const document = documentType
     ? await getManagementReportDocument(protectedPersonId, reportId, documentType)
     : null;
-  const statusLabel = snapshot.report.status === "finalized"
+  const statusLabel = snapshot.report.status === "transmitted"
+    ? "Transmis"
+    : snapshot.report.status === "finalized"
     ? "Finalisé"
     : snapshot.report.status === "generated"
       ? "Projet généré"
@@ -75,7 +78,7 @@ export default async function Page({
         {formatFinancialDate(snapshot.report.period_end)} ·{" "}
         {statusLabel}
       </p>
-      {["ready", "generated", "finalized"].includes(snapshot.report.status) && (
+      {["ready", "generated", "finalized", "transmitted"].includes(snapshot.report.status) && (
         <Link
           className="button button-secondary mt-3"
           href={`/dossiers/${protectedPersonId}/comptes-de-gestion/${reportId}/apercu`}
@@ -98,6 +101,16 @@ export default async function Page({
         canManage={person.accessRole !== "read_only"}
         hasDocument={Boolean(document)}
       />
+      {["finalized", "transmitted"].includes(snapshot.report.status) && (
+        <ReportTransmission
+          personId={protectedPersonId}
+          reportId={reportId}
+          status={snapshot.report.status}
+          finalizedAt={snapshot.report.finalized_at}
+          transmission={snapshot.reportTransmission}
+          canManage={person.accessRole !== "read_only"}
+        />
+      )}
     </PrivateShell>
   );
 }
