@@ -226,8 +226,8 @@ export type Database = {
         Relationships: [];
       };
       management_report_documents: {
-        Row: { id: string; management_report_id: string; document_type: ManagementReportDocumentType; storage_path: string; file_name: string; mime_type: string; file_size: number; generated_by: string; created_at: string };
-        Insert: { id?: string; management_report_id: string; document_type: ManagementReportDocumentType; storage_path: string; file_name: string; mime_type?: string; file_size: number; generated_by: string; created_at?: string };
+        Row: { id: string; management_report_id: string; document_type: ManagementReportDocumentType; storage_path: string; file_name: string; mime_type: string; file_size: number; preview_snapshot: Json | null; snapshot_schema_version: number | null; generated_by: string; created_at: string };
+        Insert: { id?: string; management_report_id: string; document_type: ManagementReportDocumentType; storage_path: string; file_name: string; mime_type?: string; file_size: number; preview_snapshot?: Json | null; snapshot_schema_version?: number | null; generated_by: string; created_at?: string };
         Update: never;
         Relationships: [];
       };
@@ -250,9 +250,9 @@ export type Database = {
       delete_empty_financial_account: { Args: { p_account_id: string }; Returns: undefined };
       delete_empty_protected_person: { Args: { p_protected_person_id: string }; Returns: undefined };
       delete_transaction_with_document: { Args: { p_transaction_id: string }; Returns: undefined };
-      finalize_management_report_draft_generation: { Args: { p_report_id: string; p_storage_path: string; p_file_name: string; p_mime_type: string; p_file_size: number }; Returns: string };
+      finalize_management_report_draft_generation: { Args: { p_report_id: string; p_storage_path: string; p_file_name: string; p_mime_type: string; p_file_size: number; p_preview_snapshot: Json; p_snapshot_schema_version: number }; Returns: string };
       resume_management_report_preparation: { Args: { p_report_id: string }; Returns: undefined };
-      finalize_management_report: { Args: { p_report_id: string; p_storage_path: string; p_file_name: string; p_mime_type: string; p_file_size: number }; Returns: string };
+      finalize_management_report: { Args: { p_report_id: string; p_storage_path: string; p_file_name: string; p_mime_type: string; p_file_size: number; p_preview_snapshot: Json; p_snapshot_schema_version: number }; Returns: string };
       declare_management_report_transmission: { Args: { p_report_id: string; p_transmission_date: string; p_transmission_method: string; p_recipient: string; p_note?: string | null }; Returns: string };
     };
     Enums: Record<string, never>;

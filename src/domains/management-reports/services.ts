@@ -18,6 +18,7 @@ import {
 } from "./completeness";
 import type { Database } from "@/types/database";
 import { buildManagementReportPreview } from "./preview-model";
+import { MANAGEMENT_REPORT_SNAPSHOT_SCHEMA_VERSION, parseManagementReportSnapshot } from "./snapshot";
 export async function getManagementReports(personId: string) {
   const { supabase } = await getAuthenticatedUser();
   const { data, error } = await supabase
@@ -115,6 +116,17 @@ export async function updateManagementReportStatus(
   if (error) throw new Error("Impossible de modifier le statut du compte de gestion.");
   return Boolean(data);
 }
+export async function getManagementReportTransmission(reportId: string) {
+  const { supabase } = await getAuthenticatedUser();
+  const { data, error } = await supabase
+    .from("management_report_transmissions")
+    .select("*")
+    .eq("management_report_id", reportId)
+    .maybeSingle();
+  if (error)
+    throw new Error("Impossible de charger la transmission du compte de gestion.");
+  return data;
+}
 export async function getManagementReportSnapshot(
   personId: string,
   reportId: string,
@@ -134,13 +146,7 @@ export async function getManagementReportSnapshot(
   ]);
   if (result.error || !result.data || !person) return null;
   const report = result.data;
-  const transmissionResult = await supabase
-    .from("management_report_transmissions")
-    .select("*")
-    .eq("management_report_id", report.id)
-    .maybeSingle();
-  if (transmissionResult.error)
-    throw new Error("Impossible de charger la transmission du compte de gestion.");
+  const reportTransmission = await getManagementReportTransmission(report.id);
   const accountIds = accounts.map((account) => account.id);
   const empty = { data: [], error: null };
   const [categoryResult, transactionResult, latestStatements] =
@@ -291,7 +297,7 @@ export async function getManagementReportSnapshot(
   ];
   return {
     report,
-    reportTransmission: transmissionResult.data,
+    reportTransmission,
     person,
     properties,
     propertyEvents,
@@ -309,10 +315,64 @@ export async function getManagementReportSnapshot(
   };
 }
 
-export async function getManagementReportPreview(
+export async function getLiveManagementReportPreview(
   personId: string,
   reportId: string,
 ) {
   const snapshot = await getManagementReportSnapshot(personId, reportId);
   return snapshot ? buildManagementReportPreview(snapshot) : null;
+}
+
+export type ManagementReportPreviewState =
+  | {
+      availability: "available";
+      preview: NonNullable<Awaited<ReturnType<typeof getLiveManagementReportPreview>>>;
+      liveSnapshot: NonNullable<Awaited<ReturnType<typeof getManagementReportSnapshot>>> | null;
+    }
+  | {
+      availability: "draft" | "missing_snapshot" | "unsupported_version" | "invalid_snapshot";
+      preview: null;
+      liveSnapshot: null;
+    };
+
+export async function getManagementReportPreviewState(personId: string, reportId: string) {
+  const { supabase } = await getAuthenticatedUser();
+  const [reportResult, person] = await Promise.all([
+    supabase.from("management_reports").select("*").eq("id", reportId).eq("protected_person_id", personId).maybeSingle(),
+    getProtectedPerson(personId),
+  ]);
+  if (reportResult.error || !reportResult.data || !person) return null;
+  const report = reportResult.data;
+
+  if (report.status === "draft") {
+    return { report, person, state: { availability: "draft", preview: null, liveSnapshot: null } satisfies ManagementReportPreviewState };
+  }
+  if (report.status === "ready") {
+    const liveSnapshot = await getManagementReportSnapshot(personId, reportId);
+    return liveSnapshot
+      ? {
+          report,
+          person,
+          state: {
+            availability: "available",
+            preview: buildManagementReportPreview(liveSnapshot),
+            liveSnapshot,
+          } satisfies ManagementReportPreviewState,
+        }
+      : null;
+  }
+
+  const documentType = report.status === "generated" ? "management_report_draft" : "management_report";
+  const document = await getManagementReportDocument(personId, reportId, documentType);
+  if (!document?.preview_snapshot || document.snapshot_schema_version === null) {
+    return { report, person, state: { availability: "missing_snapshot", preview: null, liveSnapshot: null } satisfies ManagementReportPreviewState };
+  }
+  if (document.snapshot_schema_version !== MANAGEMENT_REPORT_SNAPSHOT_SCHEMA_VERSION) {
+    return { report, person, state: { availability: "unsupported_version", preview: null, liveSnapshot: null } satisfies ManagementReportPreviewState };
+  }
+  const parsed = parseManagementReportSnapshot(document.preview_snapshot);
+  if (!parsed.success) {
+    return { report, person, state: { availability: "invalid_snapshot", preview: null, liveSnapshot: null } satisfies ManagementReportPreviewState };
+  }
+  return { report, person, state: { availability: "available", preview: parsed.data, liveSnapshot: null } satisfies ManagementReportPreviewState };
 }

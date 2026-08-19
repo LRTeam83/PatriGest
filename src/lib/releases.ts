@@ -10,6 +10,19 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.4.3",
+    date: "2026-08-19",
+    title: "Fiabilité des valorisations et comptes de gestion",
+    summary: "Correction des valorisations financières et renforcement de l’intégrité historique des comptes de gestion générés et finalisés.",
+    changes: [
+      "Correction de la date, de la valeur et du commentaire d’une valorisation existante",
+      "Meilleure gestion des droits de modification et du cycle de vie des comptes",
+      "Photographie figée des données lors de la génération d’un projet",
+      "Conservation définitive des données utilisées lors de la finalisation",
+      "Protection des anciens comptes de gestion contre les recalculs à partir de données modifiées ultérieurement",
+    ],
+  },
+  {
     version: "0.4.2",
     date: "2026-08-18",
     title: "Transmission des comptes de gestion",

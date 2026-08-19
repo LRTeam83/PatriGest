@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { accountValuationSchema } from "./schemas/account-valuation-schema";
 import { closeFinancialAccountSchema, financialAccountSchema } from "./schemas/financial-account-schema";
-import { closeFinancialAccount, createAccountValuation, createFinancialAccount, deleteFinancialAccount, getFinancialAccount, reopenFinancialAccount, updateFinancialAccount } from "./services/financial-account-service";
+import { closeFinancialAccount, createAccountValuation, createFinancialAccount, deleteFinancialAccount, getFinancialAccount, reopenFinancialAccount, updateAccountValuation, updateFinancialAccount } from "./services/financial-account-service";
 import type { FinancialAccountActionState } from "./state";
 
 function invalid(error: z.ZodError): FinancialAccountActionState { return { status: "error", message: "Vérifiez les informations saisies.", fieldErrors: error.flatten().fieldErrors }; }
@@ -71,4 +71,21 @@ export async function createAccountValuationAction(protectedPersonId: string, ac
   const account = await getFinancialAccount(accountId);
   if (!account || account.protected_person_id !== protectedPersonId) return { status: "error", message: "Compte introuvable." };
   try { await createAccountValuation(accountId, parsed.data); revalidatePath(`/dossiers/${protectedPersonId}/comptes`); revalidatePath(`/dossiers/${protectedPersonId}/comptes/${accountId}`); revalidatePath(`/dossiers/${protectedPersonId}`); return { status: "success", message: "La valorisation a été ajoutée." }; } catch { return { status: "error", message: "Impossible d’ajouter la valorisation. Vérifiez qu’aucune valeur n’existe déjà à cette date." }; }
+}
+
+export async function updateAccountValuationAction(protectedPersonId: string, accountId: string, valuationId: string, _state: FinancialAccountActionState, formData: FormData): Promise<FinancialAccountActionState> {
+  if (!validIds(protectedPersonId, accountId, valuationId)) return { status: "error", message: "Valorisation invalide." };
+  const parsed = accountValuationSchema.safeParse({ valuationDate: formData.get("valuationDate"), value: formData.get("value"), comment: formData.get("comment") });
+  if (!parsed.success) return invalid(parsed.error);
+  const account = await getFinancialAccount(accountId);
+  if (!account || account.protected_person_id !== protectedPersonId) return { status: "error", message: "Compte introuvable." };
+  try {
+    await updateAccountValuation(accountId, valuationId, parsed.data);
+    revalidatePath(`/dossiers/${protectedPersonId}/comptes`);
+    revalidatePath(`/dossiers/${protectedPersonId}/comptes/${accountId}`);
+    revalidatePath(`/dossiers/${protectedPersonId}`);
+    return { status: "success", message: "La valorisation a été modifiée." };
+  } catch (error) {
+    return { status: "error", message: error instanceof Error ? error.message : "Impossible de modifier la valorisation." };
+  }
 }

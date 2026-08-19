@@ -84,6 +84,10 @@ function buildOfficialSections(
 }
 
 export function buildManagementReportPreview(snapshot: Snapshot) {
+  const { accessRole: _accessRole, protectionMeasures: _protectionMeasures, managementPeriods: _managementPeriods, ...person } = snapshot.person;
+  void _accessRole;
+  void _protectionMeasures;
+  void _managementPeriods;
   const resources = buildOfficialSections(snapshot, "RES-");
   const expenses = buildOfficialSections(snapshot, "DEP-");
   const resultCents = resources.totalCents - expenses.totalCents;
@@ -209,7 +213,7 @@ export function buildManagementReportPreview(snapshot: Snapshot) {
   return {
     complete: snapshot.completeness.complete,
     report: snapshot.report,
-    person: snapshot.person,
+    person,
     measure: snapshot.activeMeasure,
     measureCorrespondence: snapshot.measureCorrespondence,
     resources,

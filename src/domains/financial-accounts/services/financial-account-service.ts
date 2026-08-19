@@ -22,6 +22,13 @@ async function requireOwnedAccount(accountId: string) {
   return { ...auth, account };
 }
 
+async function requireManagedAccount(accountId: string) {
+  const result = await requireOwnedAccount(accountId);
+  const { data: canManage, error } = await result.supabase.rpc("can_manage_protected_person", { person_id: result.account.protected_person_id });
+  if (error || !canManage) throw new Error("Modification du compte non autorisée.");
+  return result;
+}
+
 export async function getFinancialAccounts(protectedPersonId: string): Promise<FinancialAccountWithValuations[]> {
   const { supabase } = await requireOwnedPerson(protectedPersonId);
   const { data: accounts, error } = await supabase.from("financial_accounts").select("*").eq("protected_person_id", protectedPersonId).order("created_at", { ascending: false });
@@ -61,14 +68,14 @@ export async function updateFinancialAccount(accountId: string, input: Financial
 }
 
 export async function closeFinancialAccount(accountId: string, closingDate: string) {
-  const { supabase, account } = await requireOwnedAccount(accountId);
+  const { supabase, account } = await requireManagedAccount(accountId);
   if (closingDate < account.initial_balance_date || (account.opening_date && closingDate < account.opening_date)) throw new Error("La date de clôture est antérieure aux dates du compte.");
   const { error } = await supabase.from("financial_accounts").update({ status: "closed", closing_date: closingDate }).eq("id", accountId);
   if (error) throw new Error("Impossible de clôturer le compte.");
 }
 
 export async function reopenFinancialAccount(accountId: string) {
-  const { supabase } = await requireOwnedAccount(accountId);
+  const { supabase } = await requireManagedAccount(accountId);
   const { error } = await supabase.from("financial_accounts").update({ status: "active", closing_date: null }).eq("id", accountId);
   if (error) throw new Error("Impossible de rouvrir le compte.");
 }
@@ -95,5 +102,31 @@ export async function createAccountValuation(accountId: string, input: AccountVa
   if (!isValuationAccount(account.account_type)) throw new Error("Ce compte n’accepte pas de valorisations.");
   const { data, error } = await supabase.from("account_valuations").insert({ financial_account_id: accountId, valuation_date: input.valuationDate, value: input.value, comment: input.comment }).select("*").single();
   if (error) throw new Error("Impossible d’ajouter la valorisation.");
+  return data;
+}
+
+export async function updateAccountValuation(accountId: string, valuationId: string, input: AccountValuationInput) {
+  const { supabase, account } = await requireOwnedAccount(accountId);
+  if (!isValuationAccount(account.account_type)) throw new Error("Ce compte n’accepte pas de valorisations.");
+
+  const { data: valuation, error: lookupError } = await supabase
+    .from("account_valuations")
+    .select("id, financial_account_id")
+    .eq("id", valuationId)
+    .eq("financial_account_id", accountId)
+    .maybeSingle();
+
+  if (lookupError || !valuation) throw new Error("Valorisation introuvable.");
+
+  const { data, error } = await supabase
+    .from("account_valuations")
+    .update({ valuation_date: input.valuationDate, value: input.value, comment: input.comment })
+    .eq("id", valuationId)
+    .eq("financial_account_id", accountId)
+    .select("*")
+    .single();
+
+  if (error?.code === "23505") throw new Error("Une valorisation existe déjà à cette date.");
+  if (error) throw new Error("Impossible de modifier la valorisation.");
   return data;
 }
