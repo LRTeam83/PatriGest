@@ -59,3 +59,17 @@ export const managementReportDifficultySchema = z.object({
   recipient: z.string().trim().max(500).transform((value) => value || null),
   note: z.string().trim().max(5000).transform((value) => value || null),
 });
+
+export const managementReportAccountSelectionSchema = z.object({
+  financialAccountId: z.uuid(),
+  selectionMode: z.enum(["auto", "included_manual", "excluded_manual"]),
+  reason: z.string().trim().max(2000, "La justification ne peut pas dépasser 2 000 caractères."),
+}).superRefine((value, context) => {
+  if (value.selectionMode !== "auto" && !value.reason) {
+    context.addIssue({
+      code: "custom",
+      path: ["reason"],
+      message: "La justification est obligatoire.",
+    });
+  }
+});

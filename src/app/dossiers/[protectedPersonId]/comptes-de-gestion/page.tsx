@@ -5,8 +5,8 @@ import { PrivateShell } from "@/components/layout/private-shell";
 import { AppBreadcrumb } from "@/components/ui/app-breadcrumb";
 import { DossierNavigation } from "@/domains/protected-persons/components/dossier-navigation";
 import { getProtectedPerson } from "@/domains/protected-persons/services/protected-person-service";
-import { createManagementReportAction } from "@/domains/management-reports/actions";
 import { getManagementReports } from "@/domains/management-reports/services";
+import { ManagementReportCreateForm } from "@/domains/management-reports/management-report-create-form";
 import { formatFinancialDate } from "@/domains/financial-accounts/utils/financial-account-utils";
 export const dynamic = "force-dynamic";
 export default async function Page({
@@ -24,6 +24,8 @@ export default async function Page({
   const canManage = person.accessRole !== "read_only";
   const suggested = person.managementPeriods.find(
     (period) =>
+      period.start_date.slice(0, 4) === period.end_date.slice(0, 4) &&
+      period.end_date.endsWith("-12-31") &&
       !reports.some(
         (report) =>
           report.period_start === period.start_date &&
@@ -71,53 +73,10 @@ export default async function Page({
         current="reports"
       />
       {canManage && (
-        <form
-          action={createManagementReportAction.bind(null, protectedPersonId)}
-          className="mt-4 grid gap-2 rounded-xl border bg-white p-4 sm:grid-cols-4"
-        >
-          <input
-            type="hidden"
-            name="managementPeriodId"
-            value={suggested?.id ?? ""}
-          />
-          <div>
-            <label className="auth-label">Début</label>
-            <input
-              className="auth-input"
-              type="date"
-              name="periodStart"
-              required
-              defaultValue={suggested?.start_date}
-            />
-          </div>
-          <div>
-            <label className="auth-label">Fin</label>
-            <input
-              className="auth-input"
-              type="date"
-              name="periodEnd"
-              required
-              defaultValue={suggested?.end_date}
-            />
-          </div>
-          <div>
-            <label className="auth-label">Année</label>
-            <input
-              className="auth-input"
-              type="number"
-              name="reportYear"
-              required
-              defaultValue={
-                suggested
-                  ? Number(suggested.end_date.slice(0, 4))
-                  : new Date().getUTCFullYear()
-              }
-            />
-          </div>
-          <button className="button button-primary self-end">
-            Préparer un compte de gestion
-          </button>
-        </form>
+        <ManagementReportCreateForm
+          personId={protectedPersonId}
+          suggested={suggested ?? null}
+        />
       )}
       <div className="mt-4 space-y-2">
         {reports.map((report) => (

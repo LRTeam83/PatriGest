@@ -112,7 +112,11 @@ export function buildManagementReportPreview(snapshot: Snapshot) {
     income: situation.income,
     expense: situation.expense,
     endBalance: situation.endBalance,
-    reliable: situation.reliable,
+    reliable: situation.startReliable && situation.endReliable,
+    presentAtPeriodStart: situation.selection.presentAtPeriodStart,
+    presentAtPeriodEnd: situation.selection.presentAtPeriodEnd,
+    selectionSource: situation.selection.selectionSource,
+    manualReason: situation.selection.manualReason,
   }));
   const placements = snapshot.placementAccounts.map((account) => {
     const situation = snapshot.situations.find(
@@ -135,7 +139,7 @@ export function buildManagementReportPreview(snapshot: Snapshot) {
         (account.initial_balance_date <= snapshot.report.period_end
           ? account.initial_balance_date
           : null),
-      reliable: situation?.reliable ?? false,
+      reliable: situation ? situation.startReliable && situation.endReliable : false,
     };
   });
   const properties = snapshot.properties
@@ -207,8 +211,9 @@ export function buildManagementReportPreview(snapshot: Snapshot) {
     reference: resources.count === 18 && expenses.count === 38,
     classified: snapshot.aggregation.unclassified === 0 && unexpectedCodes.length === 0,
   };
-  const startBalanceCents = accounts.every((account) => account.startBalance !== null)
-    ? accounts.reduce((total, account) => total + toCents(account.startBalance ?? 0), 0)
+  const startAccounts = accounts.filter((account) => account.presentAtPeriodStart);
+  const startBalanceCents = startAccounts.every((account) => account.startBalance !== null)
+    ? startAccounts.reduce((total, account) => total + toCents(account.startBalance ?? 0), 0)
     : null;
   return {
     complete: snapshot.completeness.complete,

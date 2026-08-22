@@ -8,28 +8,41 @@ import {
   managementReportDifficultySchema,
   managementReportTransmissionSchema,
   managementReportUpdateSchema,
+  managementReportAccountSelectionSchema,
 } from "./schemas";
 import {
   createManagementReport,
   getManagementReportSnapshot,
   updateManagementReport,
   updateManagementReportStatus,
+  setManagementReportAccountSelection,
 } from "./services";
 import type { ManagementReportStatusActionState } from "./state";
 export async function createManagementReportAction(
   personId: string,
+  previousState: ManagementReportStatusActionState,
   formData: FormData,
-) {
+) : Promise<ManagementReportStatusActionState> {
+  void previousState;
   const parsed = managementReportCreateSchema.safeParse({
     managementPeriodId: formData.get("managementPeriodId"),
     periodStart: formData.get("periodStart"),
     periodEnd: formData.get("periodEnd"),
     reportYear: formData.get("reportYear"),
   });
-  if (!parsed.success) throw new Error("Période invalide.");
-  const report = await createManagementReport(personId, parsed.data);
-  revalidatePath(`/dossiers/${personId}/comptes-de-gestion`);
-  redirect(`/dossiers/${personId}/comptes-de-gestion/${report.id}`);
+  if (!parsed.success)
+    return { status: "error", message: "Vérifiez les dates et l’année du compte de gestion." };
+  try {
+    const report = await createManagementReport(personId, parsed.data);
+    revalidatePath(`/dossiers/${personId}/comptes-de-gestion`);
+    redirect(`/dossiers/${personId}/comptes-de-gestion/${report.id}`);
+  } catch (error) {
+    if (error && typeof error === "object" && "digest" in error) throw error;
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Impossible de préparer le compte de gestion.",
+    };
+  }
 }
 
 export async function declareManagementReportApprovalAction(
@@ -120,6 +133,41 @@ export async function updateManagementReportAction(
     signature_place: parsed.data.signaturePlace,
   });
   revalidatePath(`/dossiers/${personId}/comptes-de-gestion/${reportId}`);
+}
+
+export async function setManagementReportAccountSelectionAction(
+  personId: string,
+  reportId: string,
+  previousState: ManagementReportStatusActionState,
+  formData: FormData,
+): Promise<ManagementReportStatusActionState> {
+  void previousState;
+  const parsed = managementReportAccountSelectionSchema.safeParse({
+    financialAccountId: formData.get("financialAccountId"),
+    selectionMode: formData.get("selectionMode"),
+    reason: formData.get("reason"),
+  });
+  if (!parsed.success)
+    return {
+      status: "error",
+      message: "La justification est obligatoire pour toute exception et limitée à 2 000 caractères.",
+    };
+  try {
+    await setManagementReportAccountSelection(
+      personId,
+      reportId,
+      parsed.data.financialAccountId,
+      parsed.data.selectionMode,
+      parsed.data.reason,
+    );
+    revalidatePath(`/dossiers/${personId}/comptes-de-gestion/${reportId}`);
+    return { status: "success", message: "Périmètre du compte mis à jour." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Impossible de modifier le périmètre.",
+    };
+  }
 }
 
 export async function declareManagementReportTransmissionAction(

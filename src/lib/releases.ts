@@ -10,6 +10,19 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.4.5",
+    date: "2026-08-22",
+    title: "Fiabilité du périmètre des comptes de gestion",
+    summary: `${APP_NAME} sélectionne désormais les comptes et placements d’un compte de gestion selon leur période de présence, avec des exceptions manuelles justifiées et un périmètre durablement figé dans les documents générés.`,
+    changes: [
+      "Sélection automatique des comptes et placements selon leur période de présence",
+      "Inclusion ou exclusion manuelle justifiée pendant la préparation",
+      "Relevés et contrôles de complétude limités aux comptes réellement concernés",
+      "Protection contre les comptes de gestion aux périodes chevauchantes",
+      "Conservation du périmètre et des valeurs dans les projets générés et les documents finalisés",
+    ],
+  },
+  {
     version: "0.4.4",
     date: "2026-08-22",
     title: "Approbation et signalement des comptes de gestion",

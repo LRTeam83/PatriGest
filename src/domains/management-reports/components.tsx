@@ -6,6 +6,7 @@ import {
 } from "@/domains/financial-accounts/utils/financial-account-utils";
 import { updateManagementReportAction } from "./actions";
 import { ReportStatusActions } from "./report-status-actions";
+import { AccountSelectionManager } from "./account-selection-manager";
 import type { getManagementReportSnapshot } from "./services";
 type Snapshot = NonNullable<
   Awaited<ReturnType<typeof getManagementReportSnapshot>>
@@ -39,8 +40,10 @@ export function ManagementReportDashboard({
       0,
     ),
   };
-  const start = snapshot.situations.every((item) => item.startBalance !== null)
-    ? snapshot.situations.reduce(
+  const startSituations = snapshot.situations.filter((item) => item.selection.presentAtPeriodStart);
+  const unavailableStartAccounts = startSituations.filter((item) => !item.startReliable);
+  const start = unavailableStartAccounts.length === 0
+    ? startSituations.reduce(
         (sum, item) => sum + (item.startBalance ?? 0),
         0,
       )
@@ -75,6 +78,27 @@ export function ManagementReportDashboard({
             )}
           </a>
         ))}
+      </div>
+      <div className="mt-4">
+        <AccountSelectionManager
+          personId={report.protected_person_id}
+          reportId={report.id}
+          canManage={canManage && report.status === "draft"}
+          accounts={snapshot.accountSelections.map((selection) => ({
+            accountId: selection.account.id,
+            name: selection.account.account_name,
+            type: selection.account.account_type,
+            openingDate: selection.account.opening_date,
+            closingDate: selection.account.closing_date,
+            included: selection.included,
+            presentAtPeriodStart: selection.presentAtPeriodStart,
+            presentAtPeriodEnd: selection.presentAtPeriodEnd,
+            selectionSource: selection.selectionSource,
+            automaticReason: selection.automaticReason,
+            manualMode: selection.manualMode,
+            manualReason: selection.manualReason,
+          }))}
+        />
       </div>
       <form
         action={updateManagementReportAction.bind(
@@ -173,6 +197,11 @@ export function ManagementReportDashboard({
                 ? "À compléter"
                 : formatCurrency(start + totals.resources - totals.expenses)}
             </p>
+            {unavailableStartAccounts.length > 0 && (
+              <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Solde de départ incomplet : {unavailableStartAccounts.length} compte(s) sans situation fiable au début de la période. Le détail figure dans le bloc de complétude « Comptes et placements ».
+              </p>
+            )}
             <ReportLines
               title="Ressources"
               lines={snapshot.aggregation.resources}
@@ -192,7 +221,9 @@ export function ManagementReportDashboard({
                 <strong>{item.account.account_name}</strong>
                 <span>
                   Départ{" "}
-                  {item.startBalance === null
+                  {!item.selection.presentAtPeriodStart
+                    ? "Non présent"
+                    : item.startBalance === null
                     ? "—"
                     : formatCurrency(item.startBalance)}
                 </span>
@@ -200,7 +231,11 @@ export function ManagementReportDashboard({
                 <span>Dépenses {formatCurrency(item.expense)}</span>
                 <span>
                   Fin{" "}
-                  {item.endBalance === null
+                  {!item.selection.presentAtPeriodEnd
+                    ? item.account.closing_date
+                      ? `Clôturé le ${formatFinancialDate(item.account.closing_date)}${item.endBalance === null ? "" : ` · ${formatCurrency(item.endBalance)}`}`
+                      : "Non présent"
+                    : item.endBalance === null
                     ? "—"
                     : formatCurrency(item.endBalance)}
                 </span>

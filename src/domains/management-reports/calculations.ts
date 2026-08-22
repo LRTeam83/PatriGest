@@ -9,6 +9,7 @@ import {
   resolveCategoryReference,
   resolveTransferOfficialCodeForFutureReport,
 } from "@/domains/categories/category-reference";
+import type { ManagementReportAccountDecision } from "./account-selection";
 export type ReportLine = {
   officialCode: string;
   label: string;
@@ -17,11 +18,13 @@ export type ReportLine = {
 };
 export type ReportAccountSituation = {
   account: FinancialAccount;
+  selection: ManagementReportAccountDecision;
   startBalance: number | null;
   income: number;
   expense: number;
   endBalance: number | null;
-  reliable: boolean;
+  startReliable: boolean;
+  endReliable: boolean;
 };
 const sum = (items: Transaction[], credit: boolean) =>
   items
@@ -91,19 +94,16 @@ export function aggregateReportOperations(
   };
 }
 export function calculateAccountSituations(
-  accounts: FinancialAccount[],
+  selections: ManagementReportAccountDecision[],
   transactions: Transaction[],
   valuations: AccountValuation[],
   start: string,
   end: string,
 ): ReportAccountSituation[] {
-  return accounts
-    .filter(
-      (account) =>
-        (!account.opening_date || account.opening_date <= end) &&
-        (!account.closing_date || account.closing_date >= start),
-    )
-    .map((account) => {
+  return selections
+    .filter((selection) => selection.included)
+    .map((selection) => {
+      const { account } = selection;
       const movements = transactions.filter(
         (item) => item.financial_account_id === account.id,
       );
@@ -120,24 +120,20 @@ export function calculateAccountSituations(
           (account.initial_balance_date <= date
             ? account.initial_balance
             : null);
+        const startBalance = selection.presentAtPeriodStart ? before(start) : null;
+        const endDate = selection.presentAtPeriodEnd ? end : account.closing_date ?? end;
+        const endBalance = before(endDate);
         return {
           account,
-          startBalance: before(start),
+          selection,
+          startBalance,
           income: 0,
           expense: 0,
-          endBalance: before(end),
-          reliable: before(start) !== null && before(end) !== null,
+          endBalance,
+          startReliable: !selection.presentAtPeriodStart || startBalance !== null,
+          endReliable: !selection.presentAtPeriodEnd || endBalance !== null,
         };
       }
-      if (account.initial_balance_date > start)
-        return {
-          account,
-          startBalance: null,
-          income: 0,
-          expense: 0,
-          endBalance: null,
-          reliable: false,
-        };
       const beforeStart = movements.filter(
         (item) => item.transaction_date < start,
       );
@@ -145,17 +141,23 @@ export function calculateAccountSituations(
         (item) =>
           item.transaction_date >= start && item.transaction_date <= end,
       );
-      const startBalance =
-        account.initial_balance +
-        sum(beforeStart, true) -
-        sum(beforeStart, false);
+      const startBalance = selection.presentAtPeriodStart && account.initial_balance_date <= start
+        ? account.initial_balance + sum(beforeStart, true) - sum(beforeStart, false)
+        : null;
+      const endDate = selection.presentAtPeriodEnd ? end : account.closing_date ?? end;
+      const throughEnd = movements.filter((item) => item.transaction_date <= endDate);
+      const endBalance = account.initial_balance_date <= endDate
+        ? account.initial_balance + sum(throughEnd, true) - sum(throughEnd, false)
+        : null;
       return {
         account,
+        selection,
         startBalance,
         income: sum(inPeriod, true),
         expense: sum(inPeriod, false),
-        endBalance: startBalance + sum(inPeriod, true) - sum(inPeriod, false),
-        reliable: true,
+        endBalance,
+        startReliable: !selection.presentAtPeriodStart || startBalance !== null,
+        endReliable: !selection.presentAtPeriodEnd || endBalance !== null,
       };
     });
 }

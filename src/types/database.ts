@@ -27,6 +27,7 @@ export type DebtStatus = "active" | "settled";
 export type ManagementReportStatus = "draft" | "ready" | "generated" | "finalized" | "transmitted" | "approved" | "difficulty";
 export type ManagementReportDocumentType = "management_report_draft" | "management_report" | "approval_certificate" | "difficulty_report";
 export type ManagementReportTransmissionMethod = "postal_mail" | "hand_delivery" | "email" | "external_platform" | "other";
+export type ManagementReportAccountSelectionMode = "included_manual" | "excluded_manual";
 
 export type Database = {
   public: {
@@ -231,6 +232,12 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      management_report_account_selections: {
+        Row: { id: string; management_report_id: string; financial_account_id: string; selection_mode: ManagementReportAccountSelectionMode; reason: string; created_by: string; created_at: string; updated_at: string };
+        Insert: { id?: string; management_report_id: string; financial_account_id: string; selection_mode: ManagementReportAccountSelectionMode; reason: string; created_by: string; created_at?: string; updated_at?: string };
+        Update: { selection_mode?: ManagementReportAccountSelectionMode; reason?: string; updated_at?: string };
+        Relationships: [];
+      };
       management_report_transmissions: {
         Row: { id: string; management_report_id: string; transmission_date: string; transmission_method: ManagementReportTransmissionMethod; recipient: string; note: string | null; declared_by: string; created_at: string; updated_at: string };
         Insert: never;
@@ -293,6 +300,7 @@ export type DebtBalance = Database["public"]["Tables"]["debt_balances"]["Row"];
 export type BankStatement = Database["public"]["Tables"]["bank_statements"]["Row"];
 export type ManagementReport = Database["public"]["Tables"]["management_reports"]["Row"];
 export type ManagementReportDocument = Database["public"]["Tables"]["management_report_documents"]["Row"];
+export type ManagementReportAccountSelection = Database["public"]["Tables"]["management_report_account_selections"]["Row"];
 export type ManagementReportTransmission = Database["public"]["Tables"]["management_report_transmissions"]["Row"];
 export type ManagementReportApproval = Database["public"]["Tables"]["management_report_approvals"]["Row"];
 export type ManagementReportDifficulty = Database["public"]["Tables"]["management_report_difficulties"]["Row"];

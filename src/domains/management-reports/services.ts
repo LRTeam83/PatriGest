@@ -20,6 +20,7 @@ import type { Database } from "@/types/database";
 import type { ManagementReportDocumentType } from "@/types/database";
 import { buildManagementReportPreview } from "./preview-model";
 import { MANAGEMENT_REPORT_SNAPSHOT_SCHEMA_VERSION, parseManagementReportSnapshot } from "./snapshot";
+import { getManagementReportAccountSelection } from "./account-selection";
 export async function getManagementReports(personId: string) {
   const { supabase } = await getAuthenticatedUser();
   const { data, error } = await supabase
@@ -63,6 +64,31 @@ export async function createManagementReport(
   },
 ) {
   const { supabase, userId } = await getAuthenticatedUser();
+
+  if (input.managementPeriodId) {
+    const { data: period, error: periodError } = await supabase
+      .from("management_periods")
+      .select("start_date,end_date")
+      .eq("id", input.managementPeriodId)
+      .eq("protected_person_id", personId)
+      .maybeSingle();
+    if (periodError || !period)
+      throw new Error("L’exercice de gestion sélectionné est introuvable.");
+    if (period.start_date !== input.periodStart || period.end_date !== input.periodEnd)
+      throw new Error("Les dates doivent correspondre exactement à l’exercice de gestion sélectionné.");
+  }
+
+  const { data: overlappingReports, error: overlapError } = await supabase
+    .from("management_reports")
+    .select("id")
+    .eq("protected_person_id", personId)
+    .lte("period_start", input.periodEnd)
+    .gte("period_end", input.periodStart)
+    .limit(1);
+  if (overlapError) throw new Error("Impossible de vérifier la période du compte de gestion.");
+  if (overlappingReports.length)
+    throw new Error("Un compte de gestion existe déjà sur tout ou partie de cette période.");
+
   const { data, error } = await supabase
     .from("management_reports")
     .insert({
@@ -77,8 +103,8 @@ export async function createManagementReport(
     .single();
   if (error)
     throw new Error(
-      error.code === "23505"
-        ? "Un compte de gestion existe déjà pour cette période."
+      error.code === "23505" || error.code === "23P01"
+        ? "Un compte de gestion existe déjà sur tout ou partie de cette période."
         : "Impossible de préparer le compte de gestion.",
     );
   return data;
@@ -116,6 +142,58 @@ export async function updateManagementReportStatus(
     .maybeSingle();
   if (error) throw new Error("Impossible de modifier le statut du compte de gestion.");
   return Boolean(data);
+}
+export async function setManagementReportAccountSelection(
+  personId: string,
+  reportId: string,
+  accountId: string,
+  selectionMode: "auto" | "included_manual" | "excluded_manual",
+  reason: string,
+) {
+  const { supabase, userId } = await getAuthenticatedUser();
+  const [{ data: report }, { data: account }, { data: canManage, error: permissionError }] = await Promise.all([
+    supabase.from("management_reports").select("id,status").eq("id", reportId).eq("protected_person_id", personId).maybeSingle(),
+    supabase.from("financial_accounts").select("id").eq("id", accountId).eq("protected_person_id", personId).maybeSingle(),
+    supabase.rpc("can_manage_protected_person", { person_id: personId }),
+  ]);
+  if (!report || !account) throw new Error("Compte ou compte de gestion introuvable.");
+  if (permissionError || !canManage) throw new Error("Modification du périmètre non autorisée.");
+  if (report.status !== "draft") throw new Error("Le périmètre est verrouillé hors préparation.");
+
+  const existing = await supabase
+    .from("management_report_account_selections")
+    .select("id")
+    .eq("management_report_id", reportId)
+    .eq("financial_account_id", accountId)
+    .maybeSingle();
+  if (existing.error) throw new Error("Impossible de vérifier la sélection du compte.");
+
+  if (selectionMode === "auto") {
+    if (!existing.data) return;
+    const { error } = await supabase
+      .from("management_report_account_selections")
+      .delete()
+      .eq("id", existing.data.id);
+    if (error) throw new Error("Impossible de rétablir la règle automatique.");
+    return;
+  }
+
+  if (existing.data) {
+    const { error } = await supabase
+      .from("management_report_account_selections")
+      .update({ selection_mode: selectionMode, reason })
+      .eq("id", existing.data.id);
+    if (error) throw new Error("Impossible de modifier l’exception de sélection.");
+    return;
+  }
+  const { error } = await supabase.from("management_report_account_selections").insert({
+    management_report_id: reportId,
+    financial_account_id: accountId,
+    selection_mode: selectionMode,
+    reason,
+    created_by: userId,
+  });
+  if (error) throw new Error("Impossible d’enregistrer l’exception de sélection.");
 }
 export async function getManagementReportTransmission(reportId: string) {
   const { supabase } = await getAuthenticatedUser();
@@ -157,8 +235,25 @@ export async function getManagementReportSnapshot(
   ]);
   if (result.error || !result.data || !person) return null;
   const report = result.data;
-  const reportTransmission = await getManagementReportTransmission(report.id);
-  const accountIds = accounts.map((account) => account.id);
+  const [reportTransmission, selectionResult] = await Promise.all([
+    getManagementReportTransmission(report.id),
+    supabase
+      .from("management_report_account_selections")
+      .select("*")
+      .eq("management_report_id", report.id),
+  ]);
+  if (selectionResult.error)
+    throw new Error("Impossible de charger le périmètre des comptes.");
+  const accountSelections = getManagementReportAccountSelection(
+    accounts,
+    selectionResult.data,
+    report.period_start,
+    report.period_end,
+  );
+  const includedAccounts = accountSelections
+    .filter((selection) => selection.included)
+    .map((selection) => selection.account);
+  const accountIds = includedAccounts.map((account) => account.id);
   const empty = { data: [], error: null };
   const [categoryResult, transactionResult, latestStatements] =
     await Promise.all([
@@ -171,7 +266,7 @@ export async function getManagementReportSnapshot(
             .gte("transaction_date", report.period_start)
             .lte("transaction_date", report.period_end)
         : Promise.resolve(empty),
-      Promise.all(accounts.map(async (account) => ({
+      Promise.all(includedAccounts.map(async (account) => ({
         account,
         statement: await getLatestBankStatementAtOrBefore(account.id, report.period_end),
       }))),
@@ -181,12 +276,12 @@ export async function getManagementReportSnapshot(
   const aggregation = aggregateReportOperations(
     transactionResult.data,
     categoryResult.data,
-    accounts,
+    includedAccounts,
   );
   const situations = calculateAccountSituations(
-    accounts,
-    accounts.flatMap((account) => account.transactions),
-    accounts.flatMap((account) => account.valuations),
+    accountSelections,
+    includedAccounts.flatMap((account) => account.transactions),
+    includedAccounts.flatMap((account) => account.valuations),
     report.period_start,
     report.period_end,
   );
@@ -207,7 +302,7 @@ export async function getManagementReportSnapshot(
       )
       .map((event) => ({ property, event })),
   );
-  const placementAccounts = accounts.filter(
+  const placementAccounts = includedAccounts.filter(
     (account) =>
       account.account_type === "life_insurance" ||
       account.account_type === "other_investment",
@@ -280,13 +375,15 @@ export async function getManagementReportSnapshot(
     {
       key: "accounts",
       label: "Comptes et placements",
-      complete: situations.every((item) => item.reliable),
-      missing: situations
-        .filter((item) => !item.reliable)
-        .map(
-          (item) =>
-            `Solde de départ indisponible — ${item.account.account_name}`,
-        ),
+      complete: situations.every((item) => item.startReliable && item.endReliable),
+      missing: situations.flatMap((item) => [
+        ...(!item.startReliable
+          ? [`Solde de départ indisponible — ${item.account.account_name}`]
+          : []),
+        ...(!item.endReliable
+          ? [`Situation de fin indisponible — ${item.account.account_name}`]
+          : []),
+      ]),
     },
     {
       key: "statements",
@@ -319,6 +416,7 @@ export async function getManagementReportSnapshot(
       (category) => category.is_system && Boolean(category.official_code),
     ),
     situations,
+    accountSelections,
     latestStatements,
     activeMeasure,
     measureCorrespondence,

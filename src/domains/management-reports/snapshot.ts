@@ -75,6 +75,10 @@ export const managementReportPreviewSchema = z.object({
     id: z.string(), institution: z.string(), name: z.string(), reference: nullableString,
     type: z.string(), startBalance: nullableNumber, income: z.number(), expense: z.number(),
     endBalance: nullableNumber, reliable: z.boolean(),
+    presentAtPeriodStart: z.boolean().optional().default(true),
+    presentAtPeriodEnd: z.boolean().optional().default(true),
+    selectionSource: z.enum(["auto", "manual"]).optional().default("auto"),
+    manualReason: nullableString.optional().default(null),
   }).strict()),
   placements: z.array(datedValue.strict()),
   statements: z.array(z.object({
