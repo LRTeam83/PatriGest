@@ -237,6 +237,18 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      management_report_approvals: {
+        Row: { id: string; management_report_id: string; approval_date: string; reviewer_name: string; reviewer_role: string | null; note: string | null; declared_by: string; created_at: string; updated_at: string };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      management_report_difficulties: {
+        Row: { id: string; management_report_id: string; difficulty_date: string; recipient: string | null; reason: string; note: string | null; declared_by: string; created_at: string; updated_at: string };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -254,6 +266,8 @@ export type Database = {
       resume_management_report_preparation: { Args: { p_report_id: string }; Returns: undefined };
       finalize_management_report: { Args: { p_report_id: string; p_storage_path: string; p_file_name: string; p_mime_type: string; p_file_size: number; p_preview_snapshot: Json; p_snapshot_schema_version: number }; Returns: string };
       declare_management_report_transmission: { Args: { p_report_id: string; p_transmission_date: string; p_transmission_method: string; p_recipient: string; p_note?: string | null }; Returns: string };
+      declare_management_report_approval: { Args: { p_report_id: string; p_approval_date: string; p_reviewer_name: string; p_reviewer_role?: string | null; p_note?: string | null }; Returns: string };
+      declare_management_report_difficulty: { Args: { p_report_id: string; p_difficulty_date: string; p_reason: string; p_recipient?: string | null; p_note?: string | null }; Returns: string };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
@@ -280,3 +294,5 @@ export type BankStatement = Database["public"]["Tables"]["bank_statements"]["Row
 export type ManagementReport = Database["public"]["Tables"]["management_reports"]["Row"];
 export type ManagementReportDocument = Database["public"]["Tables"]["management_report_documents"]["Row"];
 export type ManagementReportTransmission = Database["public"]["Tables"]["management_report_transmissions"]["Row"];
+export type ManagementReportApproval = Database["public"]["Tables"]["management_report_approvals"]["Row"];
+export type ManagementReportDifficulty = Database["public"]["Tables"]["management_report_difficulties"]["Row"];

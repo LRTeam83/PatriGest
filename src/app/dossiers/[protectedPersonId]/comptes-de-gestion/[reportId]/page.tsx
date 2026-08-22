@@ -7,10 +7,12 @@ import { DossierNavigation } from "@/domains/protected-persons/components/dossie
 import { ManagementReportDashboard } from "@/domains/management-reports/components";
 import { ManagementReportPreviewView } from "@/domains/management-reports/preview";
 import { ReportDocumentActions } from "@/domains/management-reports/report-document-actions";
+import { ReportOutcome } from "@/domains/management-reports/report-outcome";
 import { ReportTransmission } from "@/domains/management-reports/report-transmission";
 import {
   getManagementReportDocument,
   getManagementReportPreviewState,
+  getManagementReportOutcome,
   getManagementReportSnapshot,
   getManagementReportTransmission,
 } from "@/domains/management-reports/services";
@@ -40,16 +42,23 @@ export default async function Page({
   if (["draft", "ready"].includes(report.status) && !preparationSnapshot) notFound();
   const documentType = report.status === "generated"
     ? "management_report_draft" as const
-    : ["finalized", "transmitted"].includes(report.status)
+    : ["finalized", "transmitted", "approved", "difficulty"].includes(report.status)
       ? "management_report" as const
       : null;
   const document = documentType
     ? await getManagementReportDocument(protectedPersonId, reportId, documentType)
     : null;
-  const transmission = ["finalized", "transmitted"].includes(report.status)
+  const transmission = ["finalized", "transmitted", "approved", "difficulty"].includes(report.status)
     ? await getManagementReportTransmission(reportId)
     : null;
-  const statusLabel = report.status === "transmitted"
+  const outcome = ["transmitted", "approved", "difficulty"].includes(report.status)
+    ? await getManagementReportOutcome(reportId)
+    : { approval: null, difficulty: null };
+  const statusLabel = report.status === "approved"
+    ? "Approuvé"
+    : report.status === "difficulty"
+      ? "Difficulté signalée"
+      : report.status === "transmitted"
     ? "Transmis"
     : report.status === "finalized"
     ? "Finalisé"
@@ -93,7 +102,7 @@ export default async function Page({
         {formatFinancialDate(report.period_end)} ·{" "}
         {statusLabel}
       </p>
-      {["ready", "generated", "finalized", "transmitted"].includes(report.status) && (
+      {["ready", "generated", "finalized", "transmitted", "approved", "difficulty"].includes(report.status) && (
         <Link
           className="button button-secondary mt-3"
           href={`/dossiers/${protectedPersonId}/comptes-de-gestion/${reportId}/apercu`}
@@ -129,13 +138,24 @@ export default async function Page({
         canManage={person.accessRole !== "read_only"}
         hasDocument={Boolean(document)}
       />
-      {["finalized", "transmitted"].includes(report.status) && (
+      {["finalized", "transmitted", "approved", "difficulty"].includes(report.status) && (
         <ReportTransmission
           personId={protectedPersonId}
           reportId={reportId}
           status={report.status}
           finalizedAt={report.finalized_at}
           transmission={transmission}
+          canManage={person.accessRole !== "read_only"}
+        />
+      )}
+      {transmission && ["transmitted", "approved", "difficulty"].includes(report.status) && (
+        <ReportOutcome
+          personId={protectedPersonId}
+          reportId={reportId}
+          status={report.status}
+          transmissionDate={transmission.transmission_date}
+          approval={outcome.approval}
+          difficulty={outcome.difficulty}
           canManage={person.accessRole !== "read_only"}
         />
       )}

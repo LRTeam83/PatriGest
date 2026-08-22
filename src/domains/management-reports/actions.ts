@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "@/domains/protected-persons/services/authenticated-user";
 import {
   managementReportCreateSchema,
+  managementReportApprovalSchema,
+  managementReportDifficultySchema,
   managementReportTransmissionSchema,
   managementReportUpdateSchema,
 } from "./schemas";
@@ -28,6 +30,70 @@ export async function createManagementReportAction(
   const report = await createManagementReport(personId, parsed.data);
   revalidatePath(`/dossiers/${personId}/comptes-de-gestion`);
   redirect(`/dossiers/${personId}/comptes-de-gestion/${report.id}`);
+}
+
+export async function declareManagementReportApprovalAction(
+  personId: string,
+  reportId: string,
+  previousState: ManagementReportStatusActionState,
+  formData: FormData,
+): Promise<ManagementReportStatusActionState> {
+  void previousState;
+  const parsed = managementReportApprovalSchema.safeParse({
+    approvalDate: formData.get("approvalDate"),
+    reviewerName: formData.get("reviewerName"),
+    reviewerRole: formData.get("reviewerRole"),
+    note: formData.get("note"),
+  });
+  if (!parsed.success)
+    return { status: "error", message: "Vérifiez les informations d’approbation." };
+  try {
+    const { supabase } = await getAuthenticatedUser();
+    const { error } = await supabase.rpc("declare_management_report_approval", {
+      p_report_id: reportId,
+      p_approval_date: parsed.data.approvalDate,
+      p_reviewer_name: parsed.data.reviewerName,
+      p_reviewer_role: parsed.data.reviewerRole,
+      p_note: parsed.data.note,
+    });
+    if (error) return { status: "error", message: "Impossible d’enregistrer l’approbation." };
+    revalidatePath(`/dossiers/${personId}/comptes-de-gestion/${reportId}`);
+    return { status: "success", message: "L’approbation a été enregistrée." };
+  } catch {
+    return { status: "error", message: "Impossible d’enregistrer l’approbation." };
+  }
+}
+
+export async function declareManagementReportDifficultyAction(
+  personId: string,
+  reportId: string,
+  previousState: ManagementReportStatusActionState,
+  formData: FormData,
+): Promise<ManagementReportStatusActionState> {
+  void previousState;
+  const parsed = managementReportDifficultySchema.safeParse({
+    difficultyDate: formData.get("difficultyDate"),
+    reason: formData.get("reason"),
+    recipient: formData.get("recipient"),
+    note: formData.get("note"),
+  });
+  if (!parsed.success)
+    return { status: "error", message: "Vérifiez les informations du signalement." };
+  try {
+    const { supabase } = await getAuthenticatedUser();
+    const { error } = await supabase.rpc("declare_management_report_difficulty", {
+      p_report_id: reportId,
+      p_difficulty_date: parsed.data.difficultyDate,
+      p_reason: parsed.data.reason,
+      p_recipient: parsed.data.recipient,
+      p_note: parsed.data.note,
+    });
+    if (error) return { status: "error", message: "Impossible d’enregistrer la difficulté." };
+    revalidatePath(`/dossiers/${personId}/comptes-de-gestion/${reportId}`);
+    return { status: "success", message: "La difficulté a été enregistrée." };
+  } catch {
+    return { status: "error", message: "Impossible d’enregistrer la difficulté." };
+  }
 }
 export async function updateManagementReportAction(
   personId: string,

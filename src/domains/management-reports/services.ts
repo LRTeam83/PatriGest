@@ -17,6 +17,7 @@ import {
   type ReportSectionCompleteness,
 } from "./completeness";
 import type { Database } from "@/types/database";
+import type { ManagementReportDocumentType } from "@/types/database";
 import { buildManagementReportPreview } from "./preview-model";
 import { MANAGEMENT_REPORT_SNAPSHOT_SCHEMA_VERSION, parseManagementReportSnapshot } from "./snapshot";
 export async function getManagementReports(personId: string) {
@@ -32,7 +33,7 @@ export async function getManagementReports(personId: string) {
 export async function getManagementReportDocument(
   personId: string,
   reportId: string,
-  documentType: "management_report_draft" | "management_report",
+  documentType: ManagementReportDocumentType,
 ) {
   const { supabase } = await getAuthenticatedUser();
   const report = await supabase
@@ -126,6 +127,16 @@ export async function getManagementReportTransmission(reportId: string) {
   if (error)
     throw new Error("Impossible de charger la transmission du compte de gestion.");
   return data;
+}
+export async function getManagementReportOutcome(reportId: string) {
+  const { supabase } = await getAuthenticatedUser();
+  const [approvalResult, difficultyResult] = await Promise.all([
+    supabase.from("management_report_approvals").select("*").eq("management_report_id", reportId).maybeSingle(),
+    supabase.from("management_report_difficulties").select("*").eq("management_report_id", reportId).maybeSingle(),
+  ]);
+  if (approvalResult.error || difficultyResult.error)
+    throw new Error("Impossible de charger le retour du contrôleur.");
+  return { approval: approvalResult.data, difficulty: difficultyResult.data };
 }
 export async function getManagementReportSnapshot(
   personId: string,

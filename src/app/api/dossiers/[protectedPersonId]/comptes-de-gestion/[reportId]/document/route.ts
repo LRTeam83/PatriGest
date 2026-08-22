@@ -105,7 +105,7 @@ export async function GET(request: Request, { params }: Params) {
   const ids = await identifiers(params);
   if (!ids) return NextResponse.json({ message: "Document introuvable." }, { status: 404 });
   const context = await getManagementReportPreviewState(ids.protectedPersonId, ids.reportId);
-  if (!context || !["generated", "finalized", "transmitted"].includes(context.report.status)) return NextResponse.json({ message: "Document introuvable." }, { status: 404 });
+  if (!context || !["generated", "finalized", "transmitted", "approved", "difficulty"].includes(context.report.status)) return NextResponse.json({ message: "Document introuvable." }, { status: 404 });
   const mode: ManagementReportPdfMode = context.report.status === "generated" ? "draft" : "final";
   const document = await getManagementReportDocument(ids.protectedPersonId, ids.reportId, mode === "draft" ? "management_report_draft" : "management_report");
   if (!document) return NextResponse.json({ message: "Document introuvable." }, { status: 404 });

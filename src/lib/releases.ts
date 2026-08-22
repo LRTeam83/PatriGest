@@ -10,6 +10,20 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.4.4",
+    date: "2026-08-22",
+    title: "Approbation et signalement des comptes de gestion",
+    summary: `${APP_NAME} permet désormais d’enregistrer le retour reçu après transmission d’un compte de gestion : approbation ou signalement d’une difficulté.`,
+    changes: [
+      "Déclaration d’une approbation après transmission",
+      "Déclaration d’une difficulté après transmission",
+      "Conservation de la date et des informations du retour",
+      "Correction contrôlée des informations enregistrées",
+      "Maintien du PDF officiel et de sa photographie réglementaire",
+      "Consultation adaptée aux droits Propriétaire, Gestionnaire et Lecture seule",
+    ],
+  },
+  {
     version: "0.4.3",
     date: "2026-08-19",
     title: "Fiabilité des valorisations et comptes de gestion",

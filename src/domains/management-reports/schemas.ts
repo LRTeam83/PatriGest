@@ -45,3 +45,17 @@ export const managementReportTransmissionSchema = z.object({
   recipient: z.string().trim().min(1).max(500),
   note: z.string().trim().max(5000).transform((value) => value || null),
 });
+
+export const managementReportApprovalSchema = z.object({
+  approvalDate: z.iso.date(),
+  reviewerName: z.string().trim().min(1).max(500),
+  reviewerRole: z.string().trim().max(500).transform((value) => value || null),
+  note: z.string().trim().max(5000).transform((value) => value || null),
+});
+
+export const managementReportDifficultySchema = z.object({
+  difficultyDate: z.iso.date(),
+  reason: z.string().trim().min(1).max(5000),
+  recipient: z.string().trim().max(500).transform((value) => value || null),
+  note: z.string().trim().max(5000).transform((value) => value || null),
+});

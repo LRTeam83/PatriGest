@@ -134,7 +134,11 @@ export default async function Page({
               </span>
             </span>
             <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold">
-              {report.status === "transmitted"
+              {report.status === "approved"
+                ? "Approuvé"
+                : report.status === "difficulty"
+                ? "Difficulté signalée"
+                : report.status === "transmitted"
                 ? "Transmis"
                 : report.status === "finalized"
                 ? "Finalisé"
