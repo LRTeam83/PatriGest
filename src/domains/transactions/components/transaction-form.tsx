@@ -11,15 +11,15 @@ import { isValuationAccount } from "@/domains/financial-accounts/utils/financial
 
 type Mode = "income" | "expense" | "transfer";
 
-export function TransactionForm({ personId, accounts, categories, transaction, defaultAccountId, defaultMode }: { personId: string; accounts: FinancialAccount[]; categories: Category[]; transaction?: Transaction; defaultAccountId?: string; defaultMode?: Mode }) {
+export function TransactionForm({ personId, accounts, categories, transaction, defaultAccountId, defaultMode, returnTo }: { personId: string; accounts: FinancialAccount[]; categories: Category[]; transaction?: Transaction; defaultAccountId?: string; defaultMode?: Mode; returnTo?: string }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>(transaction?.transaction_type === "income" ? "income" : defaultMode ?? "expense");
-  const action = transaction ? updateTransactionAction.bind(null, personId, transaction.id) : mode === "transfer" ? createTransferAction.bind(null, personId) : createTransactionAction.bind(null, personId);
+  const returnHref = returnTo ?? (defaultAccountId ? `/dossiers/${personId}/comptes/${defaultAccountId}/operations` : `/dossiers/${personId}/operations`);
+  const action = transaction ? updateTransactionAction.bind(null, personId, transaction.id, returnHref) : mode === "transfer" ? createTransferAction.bind(null, personId) : createTransactionAction.bind(null, personId);
   const [state, formAction] = useActionState(action, initialTransactionState);
   const activeAccounts = accounts.filter((account) => account.status === "active");
   const transactionalAccounts = activeAccounts.filter((account) => !isValuationAccount(account.account_type));
   const usableCategories = categories.filter((category) => (category.active || category.id === transaction?.category_id) && (category.usage === mode || category.usage === "both"));
-  const returnHref = defaultAccountId ? `/dossiers/${personId}/comptes/${defaultAccountId}/operations` : `/dossiers/${personId}/operations`;
   useEffect(() => { if (!transaction && mode !== "transfer" && state.status === "success") { router.push(returnHref); router.refresh(); } }, [mode, returnHref, router, state.status, transaction]);
 
   return <form action={formAction} className="grid gap-3 sm:grid-cols-2">
@@ -44,7 +44,7 @@ export function TransactionForm({ personId, accounts, categories, transaction, d
       <Textarea name="comment" label="Commentaire facultatif" defaultValue={transaction?.comment} />
     </>}
     <div className="sm:col-span-2"><FormMessage state={state} /></div>
-    <div className="flex flex-col-reverse gap-2 sm:col-span-2 sm:flex-row sm:justify-end"><Link href={transaction ? `/dossiers/${personId}/operations` : returnHref} className="button button-secondary">Annuler</Link><div className="sm:min-w-40"><SubmitButton pendingLabel="Enregistrement…">{transaction ? "Enregistrer" : mode === "transfer" ? "Créer le virement" : "Ajouter l’opération"}</SubmitButton></div></div>
+    <div className="flex flex-col-reverse gap-2 sm:col-span-2 sm:flex-row sm:justify-end"><Link href={returnHref} className="button button-secondary">Annuler</Link><div className="sm:min-w-40"><SubmitButton pendingLabel="Enregistrement…">{transaction ? "Enregistrer" : mode === "transfer" ? "Créer le virement" : "Ajouter l’opération"}</SubmitButton></div></div>
   </form>;
 }
 

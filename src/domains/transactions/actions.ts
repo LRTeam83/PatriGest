@@ -9,17 +9,12 @@ import { isClosedPeriodError } from "./errors";
 import { transactionSchema } from "./schemas/transaction-schema";
 import { createTransaction, deleteTransaction, updateTransaction } from "./services/transaction-service";
 import type { TransactionActionState } from "./state";
+import { getSafeTransactionReturnTo } from "./return-to";
 
 const idsValid = (...ids: string[]) => ids.every((id) => z.uuid().safeParse(id).success);
 const txValues = (formData: FormData) => ({ financialAccountId: formData.get("financialAccountId"), transactionDate: formData.get("transactionDate"), transactionType: formData.get("transactionType"), label: formData.get("label"), amount: formData.get("amount"), categoryId: formData.get("categoryId"), proofReference: formData.get("proofReference"), comment: formData.get("comment") });
 const transferValues = (formData: FormData) => ({ sourceAccountId: formData.get("sourceAccountId"), destinationAccountId: formData.get("destinationAccountId"), transferDate: formData.get("transferDate"), amount: formData.get("amount"), label: formData.get("label"), comment: formData.get("comment") });
 function refresh(personId: string) { revalidatePath(`/dossiers/${personId}`); revalidatePath(`/dossiers/${personId}/operations`); revalidatePath(`/dossiers/${personId}/comptes`); }
-function safeReturnHref(personId: string, returnHref: string) {
-  const globalHref = `/dossiers/${personId}/operations`;
-  if (returnHref === globalHref) return returnHref;
-  const match = returnHref.match(new RegExp(`^/dossiers/${personId}/comptes/([0-9a-f-]{36})/operations$`, "i"));
-  return match && z.uuid().safeParse(match[1]).success ? returnHref : globalHref;
-}
 
 export async function createTransactionAction(personId: string, _state: TransactionActionState, formData: FormData): Promise<TransactionActionState> {
   if (!idsValid(personId)) return { status: "error", message: "Dossier invalide." };
@@ -31,14 +26,14 @@ export async function createTransactionAction(personId: string, _state: Transact
   return { status: "success", message: "L’opération a été créée." };
 }
 
-export async function updateTransactionAction(personId: string, transactionId: string, _state: TransactionActionState, formData: FormData): Promise<TransactionActionState> {
+export async function updateTransactionAction(personId: string, transactionId: string, returnTo: string, _state: TransactionActionState, formData: FormData): Promise<TransactionActionState> {
   if (!idsValid(personId, transactionId)) return { status: "error", message: "Opération invalide." };
   const parsed = transactionSchema.safeParse(txValues(formData));
   if (!parsed.success) return { status: "error", message: "Vérifiez les informations saisies.", fieldErrors: parsed.error.flatten().fieldErrors };
   try { await updateTransaction(transactionId, personId, parsed.data); }
   catch (error) { return { status: "error", message: isClosedPeriodError(error) ? "Cette opération appartient à un exercice clôturé et ne peut plus être modifiée." : error instanceof Error ? error.message : "Impossible de modifier l’opération." }; }
   refresh(personId);
-  redirect(`/dossiers/${personId}/operations`);
+  redirect(getSafeTransactionReturnTo(personId, returnTo));
 }
 
 export async function createTransferAction(personId: string, _state: TransactionActionState, formData: FormData): Promise<TransactionActionState> {
@@ -58,7 +53,7 @@ export async function deleteTransactionAction(personId: string, id: string, retu
   try { await deleteTransaction(id, personId); }
   catch (error) { return { status: "error", message: isClosedPeriodError(error) ? "Cette opération appartient à un exercice clôturé et ne peut plus être supprimée." : "Impossible de supprimer l’opération." }; }
   refresh(personId);
-  redirect(safeReturnHref(personId, returnHref));
+  redirect(getSafeTransactionReturnTo(personId, returnHref));
 }
 
 export async function deleteTransferAction(personId: string, id: string, returnHref: string, _state: TransactionActionState, _formData: FormData): Promise<TransactionActionState> {
@@ -68,5 +63,5 @@ export async function deleteTransferAction(personId: string, id: string, returnH
   try { await deleteTransfer(id); }
   catch (error) { return { status: "error", message: isClosedPeriodError(error) ? "Ce virement appartient à un exercice clôturé et ne peut plus être supprimé." : "Impossible de supprimer le virement." }; }
   refresh(personId);
-  redirect(safeReturnHref(personId, returnHref));
+  redirect(getSafeTransactionReturnTo(personId, returnHref));
 }

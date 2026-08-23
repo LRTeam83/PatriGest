@@ -10,6 +10,19 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.4.7",
+    date: "2026-08-23",
+    title: "Navigation et filtres des opérations",
+    summary: `${APP_NAME} conserve désormais le contexte du compte ou les filtres du journal pendant la consultation et la modification des opérations, pour un parcours plus fluide lors de la gestion des justificatifs.`,
+    changes: [
+      "Retour au bon compte après modification d’une opération ou d’un justificatif",
+      "Filtres du journal conservés après navigation et rechargement",
+      "Comptes et lignes d’opérations plus faciles à ouvrir",
+      "Journal consultable pour les assurances-vie et autres placements",
+      "Parcours plus efficace pour la saisie en série des justificatifs",
+    ],
+  },
+  {
     version: "0.4.6",
     date: "2026-08-23",
     title: "Tableaux de bord par dossier",

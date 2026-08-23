@@ -18,6 +18,7 @@ import { TransactionJournal } from "@/domains/transactions/components/transactio
 import type { TransactionFilters as TransactionFilterValues } from "@/domains/transactions/schemas/transaction-schema";
 import { getTransactions } from "@/domains/transactions/services/transaction-service";
 import { calculateRunningBalances } from "@/domains/transactions/utils/transaction-utils";
+import { getSafeTransactionReturnTo } from "@/domains/transactions/return-to";
 
 export const metadata: Metadata = { title: "Journal du compte" };
 export const dynamic = "force-dynamic";
@@ -51,10 +52,10 @@ export default async function AccountOperationsPage({
   if (
     !person ||
     !account ||
-    account.protected_person_id !== protectedPersonId ||
-    isValuationAccount(account.account_type)
+    account.protected_person_id !== protectedPersonId
   )
     notFound();
+  const valuationAccount = isValuationAccount(account.account_type);
   const search = await searchParams;
   const filters: TransactionFilterValues = {
     startDate: one(search.start),
@@ -64,18 +65,21 @@ export default async function AccountOperationsPage({
     categoryId: one(search.category),
     query: one(search.q),
   };
+  const filterValues = { start: filters.startDate, end: filters.endDate, type: filters.type, category: filters.categoryId, q: filters.query };
+  const query = new URLSearchParams(Object.entries(filterValues).filter((entry): entry is [string, string] => Boolean(entry[1]))).toString();
+  const returnTo = getSafeTransactionReturnTo(protectedPersonId, `/dossiers/${protectedPersonId}/comptes/${accountId}/operations${query ? `?${query}` : ""}`, accountId);
   const [items, allItems] = await Promise.all([
     getTransactions(protectedPersonId, filters),
     getTransactions(protectedPersonId, { accountId }),
   ]);
-  const balances = calculateRunningBalances(account.initial_balance, allItems);
+  const balances = valuationAccount ? undefined : calculateRunningBalances(account.initial_balance, allItems);
   const current = getCurrentAccountValue(
     account,
     account.valuations,
     account.transactions,
   );
   const canManage =
-    person.accessRole !== "read_only" && account.status === "active";
+    person.accessRole !== "read_only" && account.status === "active" && !valuationAccount;
   return (
     <PrivateShell
       current="dossiers"
@@ -153,7 +157,7 @@ export default async function AccountOperationsPage({
         protectedPersonId={protectedPersonId}
         current="accounts"
       />
-      <AccountFilters categories={categories} />
+      <AccountFilters categories={categories} values={filterValues} />
       <TransactionJournal
         personId={protectedPersonId}
         items={items}
@@ -161,6 +165,7 @@ export default async function AccountOperationsPage({
         accessRole={person.accessRole}
         accountRegister
         balances={balances}
+        returnTo={returnTo}
       />
     </PrivateShell>
   );
@@ -168,28 +173,31 @@ export default async function AccountOperationsPage({
 
 function AccountFilters({
   categories,
+  values,
 }: {
   categories: Awaited<ReturnType<typeof getCategories>>;
+  values: { start?: string; end?: string; type?: string; category?: string; q?: string };
 }) {
   return (
     <form className="mt-3 rounded-xl border border-[#E2E8F0] bg-white p-2.5">
       <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-5">
-        <input
+        <label><span className="mb-1 block text-[10px] font-semibold text-[#64748B]">Date de début</span><input
           className="auth-input h-8! rounded-lg px-2.5 text-xs"
           name="start"
           type="date"
-          aria-label="Date de début"
-        />
-        <input
+          defaultValue={values.start}
+        /></label>
+        <label><span className="mb-1 block text-[10px] font-semibold text-[#64748B]">Date de fin</span><input
           className="auth-input h-8! rounded-lg px-2.5 text-xs"
           name="end"
           type="date"
-          aria-label="Date de fin"
-        />
+          defaultValue={values.end}
+        /></label>
         <select
           className="auth-input h-8! rounded-lg px-2.5 text-xs"
           name="type"
           aria-label="Type"
+          defaultValue={values.type ?? ""}
         >
           <option value="">Tous les types</option>
           <option value="income">Recettes</option>
@@ -200,6 +208,7 @@ function AccountFilters({
           className="auth-input h-8! rounded-lg px-2.5 text-xs"
           name="category"
           aria-label="Catégorie"
+          defaultValue={values.category ?? ""}
         >
           <option value="">Toutes catégories</option>
           {categories
@@ -215,6 +224,7 @@ function AccountFilters({
           name="q"
           placeholder="Rechercher…"
           aria-label="Rechercher par libellé"
+          defaultValue={values.q}
         />
       </div>
       <div className="mt-1.5 flex justify-end gap-1.5">

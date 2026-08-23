@@ -5,7 +5,7 @@ import { Download, ExternalLink, FileUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { TransactionDocument } from "@/types/database";
 
-export function TransactionProof({ personId, transactionId, reference, proof, canManage }: { personId: string; transactionId: string; reference: string; proof: TransactionDocument | null; canManage: boolean }) {
+export function TransactionProof({ personId, transactionId, reference, proof, canManage, returnTo }: { personId: string; transactionId: string; reference: string; proof: TransactionDocument | null; canManage: boolean; returnTo: string }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState(false);
@@ -17,9 +17,8 @@ export function TransactionProof({ personId, transactionId, reference, proof, ca
       const response = await fetch(endpoint, { method: "POST", body: formData });
       const result = await response.json() as { message?: string };
       if (!response.ok) throw new Error(result.message || "Impossible d’envoyer le justificatif.");
-      setMessage({ kind: "success", text: result.message || "Le justificatif a été enregistré." });
       if (inputRef.current) inputRef.current.value = "";
-      router.refresh();
+      router.push(returnTo);
     } catch (error) { setMessage({ kind: "error", text: error instanceof Error ? error.message : "Impossible d’envoyer le justificatif." }); }
     finally { setPending(false); }
   }

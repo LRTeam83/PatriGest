@@ -13,6 +13,8 @@ import { getProtectedPerson } from "@/domains/protected-persons/services/protect
 import { TransactionFilters } from "@/domains/transactions/components/transaction-filters";
 import { TransactionJournal } from "@/domains/transactions/components/transaction-journal";
 import { getTransactions } from "@/domains/transactions/services/transaction-service";
+import { getSafeTransactionReturnTo } from "@/domains/transactions/return-to";
+import type { TransactionFilters as TransactionFilterValues } from "@/domains/transactions/schemas/transaction-schema";
 
 export const metadata: Metadata = { title: "Opérations" };
 export const dynamic = "force-dynamic";
@@ -31,12 +33,15 @@ export default async function OperationsPage({ params, searchParams }: { params:
   const startDate = one(search.start);
   const endDate = one(search.end);
   const canAddOperation = person.accessRole !== "read_only";
-  const items = await getTransactions(protectedPersonId, { startDate, endDate, accountId: one(search.account), type: filterType(one(search.type)), categoryId: one(search.category), query: one(search.q) });
+  const filterValues: { start?: string; end?: string; account?: string; type?: TransactionFilterValues["type"]; category?: string; q?: string } = { start: startDate, end: endDate, account: one(search.account), type: filterType(one(search.type)), category: one(search.category), q: one(search.q) };
+  const items = await getTransactions(protectedPersonId, { startDate, endDate, accountId: filterValues.account, type: filterValues.type, categoryId: filterValues.category, query: filterValues.q });
+  const query = new URLSearchParams(Object.entries(filterValues).filter((entry): entry is [string, string] => Boolean(entry[1]))).toString();
+  const returnTo = getSafeTransactionReturnTo(protectedPersonId, `/dossiers/${protectedPersonId}/operations${query ? `?${query}` : ""}`);
   return <PrivateShell current="dossiers" dossier={{ id: protectedPersonId, name: `${person.first_name} ${person.last_name}`, current: "operations" }}>
     <AppBreadcrumb items={[{ label: "Dossiers", href: "/dossiers" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}/comptes` }, { label: "Opérations" }]} />
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-[#2563EB]">{person.first_name} {person.last_name}</p><div className="mt-1 flex flex-wrap items-end gap-x-4 gap-y-1"><h1 className="text-2xl font-bold sm:text-[28px] sm:leading-8">Opérations</h1><div className="border-l border-blue-100 pl-3"><p className="text-[10px] font-semibold leading-4 text-[#64748B]">Patrimoine actuel</p><p className="text-base font-bold leading-5">{formatCurrency(currentPatrimony)}</p></div></div></div>{canAddOperation ? <Link href={`/dossiers/${protectedPersonId}/operations/nouvelle`} className="button button-primary min-h-9 gap-2 px-4 text-xs"><Plus size={16} />Ajouter une opération</Link> : <span className="button min-h-9 cursor-not-allowed gap-2 bg-slate-200 px-4 text-xs text-[#64748B]" aria-disabled="true"><Plus size={16} />Ajouter une opération</span>}</div>
     <DossierNavigation protectedPersonId={protectedPersonId} current="operations" />
-    <TransactionFilters accounts={accounts} categories={categories} />
-    <TransactionJournal personId={protectedPersonId} items={items} periods={person.managementPeriods} accessRole={person.accessRole} />
+    <TransactionFilters personId={protectedPersonId} accounts={accounts} categories={categories} values={filterValues} />
+    <TransactionJournal personId={protectedPersonId} items={items} periods={person.managementPeriods} accessRole={person.accessRole} returnTo={returnTo} />
   </PrivateShell>;
 }
