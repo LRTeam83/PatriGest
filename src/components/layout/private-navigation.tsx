@@ -7,7 +7,7 @@ import { logoutAction } from "@/app/(auth)/actions";
 import { APP_NAME, APP_VERSION } from "@/lib/app";
 
 export type PrivateSection = "dashboard" | "dossiers" | "dossier-management" | "settings" | "administration" | "administration-requests" | "administration-users" | "history";
-export type DossierSection = "overview" | "accounts" | "operations" | "periods" | "access" | "properties" | "debts" | "reports";
+export type DossierSection = "dashboard" | "overview" | "accounts" | "operations" | "periods" | "access" | "properties" | "debts" | "reports";
 export type PrivateDossierContext = { id: string; name: string; current: DossierSection; accessRole?: "owner" | "manager" | "read_only" };
 type NavigationItem = { label: string; href: string; icon: LucideIcon; active: boolean };
 
@@ -26,6 +26,7 @@ export function PrivateNavigation({ current, dossier, isPlatformAdmin = false }:
     { label: "Gérer les dossiers", href: "/dossiers/gestion", icon: FolderCog, active: current === "dossier-management" },
   ];
   const dossierItems: NavigationItem[] = dossier ? [
+    { label: "Tableau de bord", href: `/dossiers/${dossier.id}/tableau-de-bord`, icon: LayoutDashboard, active: dossier.current === "dashboard" },
     { label: "Comptes et patrimoine", href: `/dossiers/${dossier.id}/comptes`, icon: WalletCards, active: dossier.current === "accounts" },
     { label: "Opérations", href: `/dossiers/${dossier.id}/operations`, icon: ArrowLeftRight, active: dossier.current === "operations" },
     { label: "Exercices de gestion", href: `/dossiers/${dossier.id}/exercices`, icon: CalendarRange, active: dossier.current === "periods" },

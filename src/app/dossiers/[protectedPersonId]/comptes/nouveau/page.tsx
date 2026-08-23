@@ -15,7 +15,7 @@ export default async function NewFinancialAccountPage({ params }: { params: Prom
   if (!z.uuid().safeParse(protectedPersonId).success) notFound();
   const person = await getProtectedPerson(protectedPersonId);
   if (!person || person.accessRole === "read_only") notFound();
-  return <PrivateShell current="dossiers" dossier={{ id: protectedPersonId, name: `${person.first_name} ${person.last_name}`, current: "accounts" }}>
+  return <PrivateShell current="dossiers" dossier={{ id: protectedPersonId, name: `${person.first_name} ${person.last_name}`, current: "accounts", accessRole: person.accessRole }}>
     <AppBreadcrumb items={[{ label: "Dossiers", href: "/dossiers" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}/comptes` }, { label: "Comptes et patrimoine", href: `/dossiers/${protectedPersonId}/comptes` }, { label: "Nouveau compte" }]} />
     <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#2563EB]">{person.first_name} {person.last_name}</p>
     <h1 className="mt-1 text-2xl font-bold sm:text-[28px]">Ajouter un compte</h1>

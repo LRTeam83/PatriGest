@@ -10,6 +10,20 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.4.6",
+    date: "2026-08-23",
+    title: "Tableaux de bord par dossier",
+    summary: `${APP_NAME} propose désormais un accueil global centré sur les dossiers suivis et les actions à traiter, complété par un tableau de bord financier propre à chaque personne protégée.`,
+    changes: [
+      "Nouvel accueil global centré sur les dossiers suivis et les actions à traiter",
+      "Suppression des agrégats financiers multi-dossiers",
+      "Nouveau tableau de bord dédié à chaque personne protégée",
+      "Dernières opérations et patrimoine financier contextualisés par dossier",
+      "Synthèse enrichie du patrimoine immobilier et des dettes",
+      "Droits Lecture seule mieux appliqués à la création de comptes",
+    ],
+  },
+  {
     version: "0.4.5",
     date: "2026-08-22",
     title: "Fiabilité du périmètre des comptes de gestion",

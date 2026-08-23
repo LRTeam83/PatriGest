@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowLeftRight, CalendarRange, ClipboardList, LayoutGrid, WalletCards } from "lucide-react";
+import { ArrowLeftRight, CalendarRange, ClipboardList, LayoutDashboard, LayoutGrid, WalletCards } from "lucide-react";
 
-export function DossierNavigation({ protectedPersonId, current }: { protectedPersonId: string; current: "overview" | "measure" | "accounts" | "operations" | "periods" | "properties" | "debts" | "reports" }) {
+export function DossierNavigation({ protectedPersonId, current }: { protectedPersonId: string; current: "dashboard" | "overview" | "measure" | "accounts" | "operations" | "periods" | "properties" | "debts" | "reports" }) {
   const items = [
+    { key: "dashboard", label: "Tableau de bord", href: `/dossiers/${protectedPersonId}/tableau-de-bord`, icon: LayoutDashboard },
     { key: "accounts", label: "Comptes et patrimoine", href: `/dossiers/${protectedPersonId}/comptes`, icon: WalletCards },
     { key: "operations", label: "Opérations", href: `/dossiers/${protectedPersonId}/operations`, icon: ArrowLeftRight },
     { key: "periods", label: "Exercices de gestion", href: `/dossiers/${protectedPersonId}/exercices`, icon: CalendarRange },

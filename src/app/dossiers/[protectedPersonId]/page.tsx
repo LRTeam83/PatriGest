@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
-import { Building2, CalendarDays, Landmark, MapPin, Scale, UserRound, WalletCards } from "lucide-react";
+import { Building2, CalendarDays, Landmark, LayoutDashboard, MapPin, Scale, UserRound, WalletCards } from "lucide-react";
 import { PrivateShell } from "@/components/layout/private-shell";
 import { AppBreadcrumb } from "@/components/ui/app-breadcrumb";
+import { getDebts, getProperties } from "@/domains/assets-liabilities/services";
 import { getFinancialAccounts } from "@/domains/financial-accounts/services/financial-account-service";
 import { formatCurrency, getCurrentPatrimonyValue } from "@/domains/financial-accounts/utils/financial-account-utils";
 import { DeleteProtectedPerson } from "@/domains/protected-persons/components/delete-protected-person";
@@ -22,7 +23,11 @@ export default async function ProtectedPersonDetailPage({ params }: { params: Pr
   if (!z.uuid().safeParse(protectedPersonId).success) notFound();
   const person = await getProtectedPerson(protectedPersonId);
   if (!person) notFound();
-  const accounts = await getFinancialAccounts(protectedPersonId);
+  const [accounts, properties, debts] = await Promise.all([
+    getFinancialAccounts(protectedPersonId),
+    getProperties(protectedPersonId),
+    getDebts(protectedPersonId),
+  ]);
   const activeMeasure = person.protectionMeasures.find((measure) => measure.active) ?? null;
   const openPeriod = person.managementPeriods.find((period) => period.status === "open");
   const address = [person.address_line1, person.address_line2, [person.postal_code, person.city].filter(Boolean).join(" "), person.country].filter(Boolean);
@@ -31,10 +36,13 @@ export default async function ProtectedPersonDetailPage({ params }: { params: Pr
   const personCompleteness = getProtectedPersonRegulatoryCompleteness(person);
   const measureCompleteness = getProtectionMeasureRegulatoryCompleteness(activeMeasure);
   const canManage = person.accessRole !== "read_only";
+  const knownPropertyValues = properties.flatMap((property) => property.estimated_value === null ? [] : [property.estimated_value]);
+  const activeDebts = debts.filter((debt) => debt.status === "active");
+  const knownDebtBalances = activeDebts.flatMap((debt) => debt.current_balance === null ? [] : [debt.current_balance]);
 
-  return <PrivateShell current="dossiers" dossier={{ id: protectedPersonId, name: `${person.first_name} ${person.last_name}`, current: "overview" }}>
+  return <PrivateShell current="dossiers" dossier={{ id: protectedPersonId, name: `${person.first_name} ${person.last_name}`, current: "overview", accessRole: person.accessRole }}>
     <AppBreadcrumb items={[{ label: "Dossiers", href: "/dossiers" }, { label: `${person.first_name} ${person.last_name}`, href: `/dossiers/${protectedPersonId}/comptes` }, { label: "Informations du dossier" }]} />
-    <div><p className="text-sm font-bold uppercase tracking-[0.14em] text-[#2563EB]">Fiche dossier</p><h1 className="mt-1 text-3xl font-bold tracking-tight">{person.first_name} {person.last_name}</h1><p className="mt-1 text-sm text-[#64748B]">Dossier {person.status === "active" ? "actif" : "archivé"}</p></div>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.14em] text-[#2563EB]">Fiche dossier</p><h1 className="mt-1 text-3xl font-bold tracking-tight">{person.first_name} {person.last_name}</h1><p className="mt-1 text-sm text-[#64748B]">Dossier {person.status === "active" ? "actif" : "archivé"}</p></div><Link href={`/dossiers/${protectedPersonId}/tableau-de-bord`} className="button button-secondary gap-2 self-start sm:self-auto"><LayoutDashboard aria-hidden="true" size={16} />Tableau de bord</Link></div>
     <DossierNavigation protectedPersonId={protectedPersonId} current="overview" />
     <div className="mt-6 grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <InfoCard icon={WalletCards} title="Patrimoine actuel"><p className="text-2xl font-bold">{formatCurrency(currentPatrimony)}</p><Link href={`/dossiers/${protectedPersonId}/comptes`} className="auth-link mt-2 inline-block text-xs">Voir les comptes</Link></InfoCard>
@@ -42,8 +50,8 @@ export default async function ProtectedPersonDetailPage({ params }: { params: Pr
       <InfoCard icon={MapPin} title="Domicile et résidence" action={canManage ? <EditProtectedPersonButton person={person} /> : undefined}><DataLine label="Domicile" value={address.length ? address.join(", ") : "Non renseigné"} /><DataLine label="Résidence" value={residence.length ? residence.join(", ") : "Identique au domicile"} /></InfoCard>
       <div id="mesure-protection" className="scroll-mt-28"><InfoCard icon={Scale} title="Mesure de protection" action={canManage ? <EditProtectionMeasureButton protectedPersonId={person.id} measure={activeMeasure} /> : undefined}><CompletenessBadge complete={measureCompleteness.complete} count={measureCompleteness.missingFields.length} />{activeMeasure ? <><DataLine label="Type" value={getMeasureLabel(activeMeasure.measure_type)} />{activeMeasure.start_date && <DataLine label="Ouverture / renouvellement" value={formatDate(activeMeasure.start_date)} />}{activeMeasure.case_reference && <DataLine label="Numéro RG" value={activeMeasure.case_reference} />}{activeMeasure.court_cabinet && <DataLine label="Cabinet" value={activeMeasure.court_cabinet} />}{activeMeasure.court_name && <DataLine label="Juridiction" value={[activeMeasure.court_name, activeMeasure.court_city].filter(Boolean).join(" — ")} />}{(activeMeasure.representative_first_name || activeMeasure.representative_last_name) && <DataLine label="Personne en charge" value={[activeMeasure.representative_first_name, activeMeasure.representative_last_name].filter(Boolean).join(" ")} />}{activeMeasure.representative_appointment_date && <DataLine label="Date de nomination" value={formatDate(activeMeasure.representative_appointment_date)} />}{activeMeasure.representative_phone && <DataLine label="Téléphone" value={activeMeasure.representative_phone} />}{activeMeasure.representative_email && <DataLine label="Email" value={activeMeasure.representative_email} />}</> : <p className="text-sm text-[#64748B]">Aucune mesure renseignée</p>}</InfoCard></div>
       <InfoCard icon={CalendarDays} title="Exercice de gestion">{openPeriod ? <><p className="text-sm font-semibold">Exercice ouvert</p><p className="mt-1 text-xs text-[#64748B]">Du {formatDate(openPeriod.start_date)} au {formatDate(openPeriod.end_date)}</p></> : <p className="text-sm text-[#64748B]">Aucun exercice ouvert</p>}<Link href={`/dossiers/${protectedPersonId}/exercices`} className="button button-secondary mt-3 min-h-9 px-4">Gérer les exercices</Link></InfoCard>
-      <InfoCard icon={Building2} title="Patrimoine immobilier"><p className="text-sm text-[#64748B]">Biens et événements immobiliers du dossier.</p><Link href={`/dossiers/${protectedPersonId}/patrimoine-immobilier`} className="auth-link mt-2 inline-block text-xs">Consulter le patrimoine immobilier</Link></InfoCard>
-      <InfoCard icon={Landmark} title="Dettes et emprunts"><p className="text-sm text-[#64748B]">Dettes et situations datées des soldes restants.</p><Link href={`/dossiers/${protectedPersonId}/dettes`} className="auth-link mt-2 inline-block text-xs">Consulter les dettes</Link></InfoCard>
+      <InfoCard icon={Building2} title="Patrimoine immobilier"><p className="text-sm font-semibold">{properties.length} bien{properties.length > 1 ? "s" : ""}</p><p className="mt-1 text-xs text-[#64748B]">{knownPropertyValues.length ? `Valeur connue : ${formatCurrency(knownPropertyValues.reduce((total, value) => total + value, 0))}` : "Valeur non renseignée"}</p><Link href={`/dossiers/${protectedPersonId}/patrimoine-immobilier`} className="auth-link mt-2 inline-block text-xs">Consulter le patrimoine immobilier</Link></InfoCard>
+      <InfoCard icon={Landmark} title="Dettes et emprunts">{activeDebts.length ? <><p className="text-sm font-semibold">{activeDebts.length} dette{activeDebts.length > 1 ? "s" : ""} active{activeDebts.length > 1 ? "s" : ""}</p><p className="mt-1 text-xs text-[#64748B]">{knownDebtBalances.length ? `Solde connu : ${formatCurrency(knownDebtBalances.reduce((total, value) => total + value, 0))}` : "Solde non renseigné"}</p></> : <p className="text-sm text-[#64748B]">Aucune dette active</p>}<Link href={`/dossiers/${protectedPersonId}/dettes`} className="auth-link mt-2 inline-block text-xs">Consulter les dettes</Link></InfoCard>
     </div>
     {person.accessRole === "owner" && <section className="mt-4 rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-3"><h2 className="text-sm font-bold">Gestion du dossier</h2><p className="mt-1 text-xs text-[#64748B]">La suppression définitive est disponible uniquement lorsque le dossier ne contient plus aucune donnée associée.</p><div className="mt-2"><DeleteProtectedPerson protectedPersonId={protectedPersonId} personName={`${person.first_name} ${person.last_name}`} /></div></section>}
   </PrivateShell>;

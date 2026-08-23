@@ -13,6 +13,13 @@ async function requireOwnedPerson(protectedPersonId: string) {
   return auth;
 }
 
+async function requireManagedPerson(protectedPersonId: string) {
+  const auth = await requireOwnedPerson(protectedPersonId);
+  const { data: canManage, error } = await auth.supabase.rpc("can_manage_protected_person", { person_id: protectedPersonId });
+  if (error || !canManage) throw new Error("Création du compte non autorisée.");
+  return auth;
+}
+
 async function requireOwnedAccount(accountId: string) {
   const auth = await getAuthenticatedUser();
   const { data: account, error } = await auth.supabase.from("financial_accounts").select("*").eq("id", accountId).maybeSingle();
@@ -54,7 +61,7 @@ export async function getFinancialAccount(accountId: string): Promise<FinancialA
 }
 
 export async function createFinancialAccount(protectedPersonId: string, input: FinancialAccountInput) {
-  const { supabase } = await requireOwnedPerson(protectedPersonId);
+  const { supabase } = await requireManagedPerson(protectedPersonId);
   const { data, error } = await supabase.from("financial_accounts").insert({ protected_person_id: protectedPersonId, account_type: input.accountType, account_name: input.accountName, institution_name: input.institutionName, account_reference: input.accountReference, initial_balance: input.initialBalance, initial_balance_date: input.initialBalanceDate, opening_date: input.openingDate, notes: input.notes }).select("*").single();
   if (error) throw new Error("Impossible de créer le compte.");
   return data;

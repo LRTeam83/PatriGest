@@ -1,54 +1,172 @@
-import type { FinancialAccount, ManagementPeriod, ProtectedPerson, Transaction } from "@/types/database";
+import type {
+  DossierAccessRole,
+  ManagementReportStatus,
+} from "@/types/database";
 import { getAuthenticatedUser } from "@/domains/protected-persons/services/authenticated-user";
-import { getCurrentPatrimonyValue } from "@/domains/financial-accounts/utils/financial-account-utils";
 
-export type DashboardTransaction = Transaction & {
-  account: Pick<FinancialAccount, "id" | "account_name" | "protected_person_id">;
-  person: Pick<ProtectedPerson, "id" | "first_name" | "last_name">;
+export type DashboardReportSummary = {
+  id: string;
+  reportYear: number;
+  status: ManagementReportStatus;
+};
+
+export type DashboardTask = {
+  id: string;
+  protectedPersonId: string;
+  personName: string;
+  label: string;
+  startDate: string;
+  dueDate: string;
+  href: string;
+  kind: "report_to_prepare" | "period_deadline";
+};
+
+export type DashboardDossier = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  accessRole: DossierAccessRole;
+  activeAccountCount: number;
+  latestReport: DashboardReportSummary | null;
+  nextAction: DashboardTask | null;
 };
 
 export async function getDashboardData() {
   const { supabase, userId } = await getAuthenticatedUser();
-  const [{ data: profile, error: profileError }, { data: persons, error: personsError }] = await Promise.all([
+  const [profileResult, personsResult, accessResult] = await Promise.all([
     supabase.from("profiles").select("first_name").eq("id", userId).maybeSingle(),
-    supabase.from("protected_persons").select("*").order("updated_at", { ascending: false }),
+    supabase
+      .from("protected_persons")
+      .select("id,owner_id,first_name,last_name,status,updated_at")
+      .eq("status", "active")
+      .order("updated_at", { ascending: false }),
+    supabase
+      .from("protected_person_access")
+      .select("protected_person_id,role")
+      .eq("user_id", userId),
   ]);
-  if (profileError || personsError) throw new Error("Impossible de charger le tableau de bord.");
+  if (profileResult.error || personsResult.error || accessResult.error)
+    throw new Error("Impossible de charger le tableau de bord.");
 
+  const persons = personsResult.data;
   const personIds = persons.map((person) => person.id);
-  if (!personIds.length) return { firstName: profile?.first_name ?? null, activeDossiers: 0, activeAccounts: 0, currentPatrimony: 0, upcomingPeriods: [] as ManagementPeriod[], pendingReportPeriods: [] as ManagementPeriod[], recentTransactions: [] as DashboardTransaction[] };
+  if (!personIds.length)
+    return {
+      firstName: profileResult.data?.first_name ?? null,
+      dossiers: [] as DashboardDossier[],
+      tasks: [] as DashboardTask[],
+      activeDossierCount: 0,
+      reportToPrepareCount: 0,
+      actionCount: 0,
+    };
 
-  const [{ data: accounts, error: accountsError }, { data: periods, error: periodsError }, { data: closedPeriods, error: closedPeriodsError }, { data: reports, error: reportsError }] = await Promise.all([
-    supabase.from("financial_accounts").select("*").in("protected_person_id", personIds),
-    supabase.from("management_periods").select("*").in("protected_person_id", personIds).eq("status", "open").order("end_date", { ascending: true }),
-    supabase.from("management_periods").select("*").in("protected_person_id", personIds).eq("status", "closed").order("end_date", { ascending: false }),
-    supabase.from("management_reports").select("management_period_id").in("protected_person_id", personIds),
+  const [accountsResult, periodsResult, reportsResult] = await Promise.all([
+    supabase
+      .from("financial_accounts")
+      .select("id,protected_person_id,status")
+      .in("protected_person_id", personIds),
+    supabase
+      .from("management_periods")
+      .select("id,protected_person_id,start_date,end_date,status")
+      .in("protected_person_id", personIds)
+      .in("status", ["open", "closed"])
+      .order("end_date", { ascending: true }),
+    supabase
+      .from("management_reports")
+      .select("id,protected_person_id,management_period_id,report_year,period_end,status,created_at")
+      .in("protected_person_id", personIds)
+      .order("period_end", { ascending: false })
+      .order("created_at", { ascending: false }),
   ]);
-  if (accountsError || periodsError || closedPeriodsError || reportsError) throw new Error("Impossible de charger le tableau de bord.");
+  if (accountsResult.error || periodsResult.error || reportsResult.error)
+    throw new Error("Impossible de charger le tableau de bord.");
 
-  const accountIds = accounts.map((account) => account.id);
-  const [{ data: valuations, error: valuationsError }, { data: transactions, error: transactionsError }] = accountIds.length ? await Promise.all([
-    supabase.from("account_valuations").select("*").in("financial_account_id", accountIds).order("valuation_date", { ascending: false }),
-    supabase.from("transactions").select("*").in("financial_account_id", accountIds).order("transaction_date", { ascending: false }).order("created_at", { ascending: false }),
-  ]) : [{ data: [], error: null }, { data: [], error: null }];
-  if (valuationsError || transactionsError) throw new Error("Impossible de charger le tableau de bord.");
+  const personById = new Map(persons.map((person) => [person.id, person]));
+  const accessRoleByPersonId = new Map(
+    accessResult.data.map((access) => [access.protected_person_id, access.role]),
+  );
+  const activeAccountCountByPersonId = new Map<string, number>();
+  for (const account of accountsResult.data) {
+    if (account.status !== "active") continue;
+    activeAccountCountByPersonId.set(
+      account.protected_person_id,
+      (activeAccountCountByPersonId.get(account.protected_person_id) ?? 0) + 1,
+    );
+  }
 
-  const accountsWithData = accounts.map((account) => ({ ...account, valuations: valuations.filter((valuation) => valuation.financial_account_id === account.id), transactions: transactions.filter((transaction) => transaction.financial_account_id === account.id) }));
-  const activePersonIds = new Set(persons.filter((person) => person.status === "active").map((person) => person.id));
-  const patrimonyAccounts = accountsWithData.filter((account) => activePersonIds.has(account.protected_person_id));
-  const recentTransactions = transactions.slice(0, 5).flatMap((transaction) => {
-    const account = accounts.find((item) => item.id === transaction.financial_account_id);
-    const person = account ? persons.find((item) => item.id === account.protected_person_id) : undefined;
-    return account && person ? [{ ...transaction, account: { id: account.id, account_name: account.account_name, protected_person_id: account.protected_person_id }, person: { id: person.id, first_name: person.first_name, last_name: person.last_name } }] : [];
-  });
+  const latestReportByPersonId = new Map<string, DashboardReportSummary>();
+  const reportPeriodIds = new Set<string>();
+  for (const report of reportsResult.data) {
+    if (report.management_period_id) reportPeriodIds.add(report.management_period_id);
+    if (!latestReportByPersonId.has(report.protected_person_id)) {
+      latestReportByPersonId.set(report.protected_person_id, {
+        id: report.id,
+        reportYear: report.report_year,
+        status: report.status,
+      });
+    }
+  }
+
+  const tasks: DashboardTask[] = [];
+  for (const period of periodsResult.data) {
+    const person = personById.get(period.protected_person_id);
+    if (!person) continue;
+    const personName = `${person.first_name} ${person.last_name}`;
+    if (period.status === "closed" && !reportPeriodIds.has(period.id)) {
+      tasks.push({
+        id: `report-${period.id}`,
+        protectedPersonId: person.id,
+        personName,
+        label: "Compte de gestion à préparer",
+        startDate: period.start_date,
+        dueDate: period.end_date,
+        href: `/dossiers/${person.id}/comptes-de-gestion`,
+        kind: "report_to_prepare",
+      });
+    } else if (period.status === "open") {
+      tasks.push({
+        id: `period-${period.id}`,
+        protectedPersonId: person.id,
+        personName,
+        label: "Échéance de l’exercice de gestion",
+        startDate: period.start_date,
+        dueDate: period.end_date,
+        href: `/dossiers/${person.id}/exercices`,
+        kind: "period_deadline",
+      });
+    }
+  }
+  tasks.sort(
+    (first, second) =>
+      Number(first.kind !== "report_to_prepare") - Number(second.kind !== "report_to_prepare") ||
+      first.dueDate.localeCompare(second.dueDate),
+  );
+
+  const nextActionByPersonId = new Map<string, DashboardTask>();
+  for (const task of tasks) {
+    if (!nextActionByPersonId.has(task.protectedPersonId))
+      nextActionByPersonId.set(task.protectedPersonId, task);
+  }
+
+  const dossiers: DashboardDossier[] = persons.map((person) => ({
+    id: person.id,
+    firstName: person.first_name,
+    lastName: person.last_name,
+    accessRole:
+      person.owner_id === userId
+        ? "owner"
+        : accessRoleByPersonId.get(person.id) ?? "read_only",
+    activeAccountCount: activeAccountCountByPersonId.get(person.id) ?? 0,
+    latestReport: latestReportByPersonId.get(person.id) ?? null,
+    nextAction: nextActionByPersonId.get(person.id) ?? null,
+  }));
 
   return {
-    firstName: profile?.first_name ?? null,
-    activeDossiers: activePersonIds.size,
-    activeAccounts: accounts.filter((account) => account.status === "active").length,
-    currentPatrimony: getCurrentPatrimonyValue(patrimonyAccounts),
-    upcomingPeriods: periods,
-    pendingReportPeriods: closedPeriods.filter((period) => !reports.some((report) => report.management_period_id === period.id)),
-    recentTransactions,
+    firstName: profileResult.data?.first_name ?? null,
+    dossiers,
+    tasks,
+    activeDossierCount: dossiers.length,
+    reportToPrepareCount: tasks.filter((task) => task.kind === "report_to_prepare").length,
+    actionCount: tasks.length,
   };
 }
