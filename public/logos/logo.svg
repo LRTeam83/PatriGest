@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" role="img" aria-labelledby="title">
+<title id="title">PatriGest</title>
+<rect x="24" y="20" width="320" height="320" rx="76" fill="#2563EB"/>
+<path d="M184 90l78 28v59c0 54-33 97-78 120-45-23-78-66-78-120v-59l78-28z"
+      fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linejoin="round"/>
+<path d="M146 190l26 26 54-62"
+      fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="395" y="220" font-family="Arial, Helvetica, sans-serif" font-size="142" font-weight="700" fill="#111827">PatriGest</text>
+</svg>
