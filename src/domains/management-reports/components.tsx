@@ -4,9 +4,9 @@ import {
   formatCurrency,
   formatFinancialDate,
 } from "@/domains/financial-accounts/utils/financial-account-utils";
-import { updateManagementReportAction } from "./actions";
 import { ReportStatusActions } from "./report-status-actions";
 import { AccountSelectionManager } from "./account-selection-manager";
+import { ManagementReportUpdateForm } from "./management-report-update-form";
 import type { getManagementReportSnapshot } from "./services";
 type Snapshot = NonNullable<
   Awaited<ReturnType<typeof getManagementReportSnapshot>>
@@ -100,18 +100,11 @@ export function ManagementReportDashboard({
           }))}
         />
       </div>
-      <form
-        action={updateManagementReportAction.bind(
-          null,
-          report.protected_person_id,
-          report.id,
-        )}
-        className="mt-4 space-y-3"
+      <ManagementReportUpdateForm
+        personId={report.protected_person_id}
+        reportId={report.id}
+        editable={canManage && report.status === "draft"}
       >
-        <fieldset
-          disabled={!canManage || report.status !== "draft"}
-          className="space-y-3 disabled:opacity-80"
-        >
           <section id="person" className="rounded-xl border bg-white p-4">
             <h2 className="font-bold">I. Personne protégée</h2>
             <p className="mt-1 text-sm">
@@ -318,15 +311,7 @@ export function ManagementReportDashboard({
               defaultValue={report.signature_place ?? ""}
             />
           </section>
-          {canManage && (
-            <div className="flex flex-wrap gap-2">
-              {report.status === "draft" && (
-                <button className="button button-primary">Enregistrer</button>
-              )}
-            </div>
-          )}
-        </fieldset>
-      </form>
+      </ManagementReportUpdateForm>
       {canManage && (
         <div className="mt-3">
           <ReportStatusActions

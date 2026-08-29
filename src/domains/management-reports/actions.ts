@@ -111,8 +111,10 @@ export async function declareManagementReportDifficultyAction(
 export async function updateManagementReportAction(
   personId: string,
   reportId: string,
+  previousState: ManagementReportStatusActionState,
   formData: FormData,
-) {
+): Promise<ManagementReportStatusActionState> {
+  void previousState;
   const parsed = managementReportUpdateSchema.safeParse({
     residenceChanged: formData.get("residenceChanged"),
     representativeAddressChanged: formData.get("representativeAddressChanged"),
@@ -123,16 +125,26 @@ export async function updateManagementReportAction(
     observations: formData.get("observations"),
     signaturePlace: formData.get("signaturePlace"),
   });
-  if (!parsed.success) throw new Error("Informations invalides.");
-  await updateManagementReport(personId, reportId, {
-    residence_changed: parsed.data.residenceChanged,
-    representative_address_changed: parsed.data.representativeAddressChanged,
-    real_estate_confirmed: parsed.data.realEstateConfirmed,
-    financial_investments_confirmed: parsed.data.financialInvestmentsConfirmed,
-    observations: parsed.data.observations,
-    signature_place: parsed.data.signaturePlace,
-  });
-  revalidatePath(`/dossiers/${personId}/comptes-de-gestion/${reportId}`);
+  if (!parsed.success)
+    return { status: "error", message: "Vérifiez les informations saisies." };
+  try {
+    await updateManagementReport(personId, reportId, {
+      residence_changed: parsed.data.residenceChanged,
+      representative_address_changed: parsed.data.representativeAddressChanged,
+      real_estate_confirmed: parsed.data.realEstateConfirmed,
+      financial_investments_confirmed:
+        parsed.data.financialInvestmentsConfirmed,
+      observations: parsed.data.observations,
+      signature_place: parsed.data.signaturePlace,
+    });
+    revalidatePath(`/dossiers/${personId}/comptes-de-gestion/${reportId}`);
+    return { status: "success", message: "Modifications enregistrées." };
+  } catch {
+    return {
+      status: "error",
+      message: "Impossible d’enregistrer les modifications.",
+    };
+  }
 }
 
 export async function setManagementReportAccountSelectionAction(
