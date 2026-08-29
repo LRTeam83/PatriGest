@@ -22,6 +22,20 @@ const choice = (name: string, value: boolean | null) => (
     <option value="true">Oui</option>
   </select>
 );
+
+function startAbsenceLabel(
+  account: Snapshot["situations"][number]["account"],
+  periodStart: string,
+) {
+  if (account.opening_date && account.opening_date > periodStart) {
+    return "En cours de période";
+  }
+  if (account.closing_date && account.closing_date < periodStart) {
+    return "Clôturé avant";
+  }
+  return "Non présent";
+}
+
 export function ManagementReportDashboard({
   snapshot,
   canManage,
@@ -215,7 +229,7 @@ export function ManagementReportDashboard({
                 <span>
                   Départ{" "}
                   {!item.selection.presentAtPeriodStart
-                    ? "Non présent"
+                    ? startAbsenceLabel(item.account, report.period_start)
                     : item.startBalance === null
                     ? "—"
                     : formatCurrency(item.startBalance)}
