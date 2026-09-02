@@ -32,7 +32,7 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const pathname = request.nextUrl.pathname;
   const isAccessWaitingRoute = pathname.startsWith("/acces-en-attente");
-  const isProtectedRoute = ["/tableau-de-bord", "/dossiers", "/administration", "/parametres", "/historique-versions", "/api/dossiers"].some((path) =>
+  const isProtectedRoute = ["/tableau-de-bord", "/dossiers", "/administration", "/parametres", "/mon-compte", "/historique-versions", "/api/dossiers"].some((path) =>
     pathname.startsWith(path),
   );
 
