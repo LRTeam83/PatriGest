@@ -27,22 +27,20 @@ export function HeroDashboardPreview() {
           <div className="rounded-xl bg-[#2563EB] p-4 text-white sm:col-span-1">
             <p className="text-xs font-medium text-blue-100">Patrimoine</p>
             <p className="mt-2 text-lg font-bold">87 652,18 €</p>
-            <p className="mt-2 text-xs text-blue-100">+ 2,4 % cette année</p>
+            <p className="mt-2 text-xs text-blue-100">Vision consolidée du dossier</p>
           </div>
         </div>
         <div className="grid gap-4 px-4 pb-5 sm:grid-cols-[1.1fr_0.9fr] sm:px-6 sm:pb-6">
           <div className="rounded-xl border border-[#E2E8F0] p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#64748B]">Évolution du patrimoine</p>
-                <p className="mt-1 text-sm font-bold">12 derniers mois</p>
-              </div>
-              <MoreHorizontal aria-hidden="true" size={18} className="text-[#94A3B8]" />
+            <div className="flex items-start justify-between gap-3">
+              <div><p className="text-xs text-[#64748B]">Compte de gestion 2026</p><p className="mt-1 text-sm font-bold">En préparation</p></div>
+              <MoreHorizontal aria-hidden="true" size={18} className="shrink-0 text-[#94A3B8]" />
             </div>
-            <svg className="mt-4 h-24 w-full" viewBox="0 0 260 90" role="img" aria-label="Graphique décoratif en hausse">
-              <path d="M4 74 C36 65, 47 70, 72 52 S116 61, 144 37 S188 46, 212 24 S244 22, 256 8" fill="none" stroke="#2563EB" strokeWidth="4" strokeLinecap="round" />
-              <path d="M4 74 C36 65, 47 70, 72 52 S116 61, 144 37 S188 46, 212 24 S244 22, 256 8 L256 90 L4 90 Z" fill="#DBEAFE" opacity="0.6" />
-            </svg>
+            <div className="mt-5 rounded-xl bg-blue-50 p-4">
+              <div className="flex items-center justify-between gap-3 text-xs"><span className="font-semibold text-[#2563EB]">Préparation du dossier</span><span className="font-bold text-[#2563EB]">En cours</span></div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-blue-100" aria-hidden="true"><div className="h-full w-2/3 rounded-full bg-[#2563EB]" /></div>
+              <p className="mt-3 text-xs leading-5 text-[#64748B]">Informations enregistrées et éléments à vérifier</p>
+            </div>
           </div>
           <div className="rounded-xl border border-orange-100 bg-orange-50/60 p-4">
             <p className="text-xs font-semibold text-[#EA580C]">À faire prochainement</p>
@@ -51,7 +49,7 @@ export function HeroDashboardPreview() {
           </div>
         </div>
         <div className="border-t border-[#E2E8F0] px-4 py-4 sm:px-6">
-          <p className="mb-3 text-sm font-bold">Dernières opérations</p>
+          <div className="mb-3 flex items-center justify-between gap-3"><p className="text-sm font-bold">Dernières opérations</p><p className="text-xs font-medium text-amber-700">2 éléments à compléter</p></div>
           <div className="space-y-3">
             {operations.map((operation) => (
               <div key={operation.label} className="flex items-center gap-3 text-xs">

@@ -10,8 +10,9 @@ export function PublicHeader() {
           <Image src="/logos/logo.svg" alt="PatriGest" width={133} height={40} priority className="h-10 w-auto" />
         </Link>
         <nav className="hidden items-center gap-7 text-sm font-semibold text-[#64748B] md:flex" aria-label="Navigation principale">
-          <Link className="focus-ring rounded-md transition-colors hover:text-[#2563EB]" href="#fonctionnalites">Fonctionnalités</Link>
-          <Link className="focus-ring rounded-md transition-colors hover:text-[#2563EB]" href="#aide">Aide</Link>
+          <a className="focus-ring rounded-md transition-colors hover:text-[#2563EB]" href="#fonctionnalites">Fonctionnalités</a>
+          <a className="focus-ring rounded-md transition-colors hover:text-[#2563EB]" href="#comment-ca-marche">Comment ça marche</a>
+          <a className="focus-ring rounded-md transition-colors hover:text-[#2563EB]" href="#compte-de-gestion">Compte de gestion</a>
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
           <Link className="button button-secondary mobile-hide" href="/connexion">Se connecter</Link>

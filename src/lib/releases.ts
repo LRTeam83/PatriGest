@@ -10,6 +10,20 @@ export type AppRelease = {
 
 export const APP_RELEASES: readonly AppRelease[] = [
   {
+    version: "0.5.0",
+    date: "2026-09-02",
+    title: "Accès, compte utilisateur et nouvel accueil",
+    summary: `${APP_NAME} facilite l’accès à l’application et le travail partagé, ajoute un espace personnel et présente plus clairement l’organisation d’un dossier jusqu’à la préparation du compte de gestion.`,
+    changes: [
+      "Inscription avec validation par un administrateur PatriGest ou activation grâce à une invitation valide à un dossier",
+      "Accès partagés avec les rôles Propriétaire, Gestionnaire et Lecture seule, des invitations adaptées et des droits limités selon le rôle",
+      "Nouvel espace Mon compte pour modifier son identité, consulter son adresse email, sécuriser son mot de passe et connaître son statut et son éventuel rôle d’administrateur",
+      "Nouvelle page d’accueil présentant la centralisation des comptes, opérations, relevés, justificatifs et éléments du patrimoine",
+      "Parcours simplifié jusqu’à la préparation du compte de gestion au format officiel, avec aperçu, contrôles et génération PDF",
+      "Nouvelle illustration du tableau de bord, mise en avant du travail partagé et métadonnées de la page d’accueil améliorées",
+    ],
+  },
+  {
     version: "0.4.7",
     date: "2026-08-23",
     title: "Navigation et filtres des opérations",
