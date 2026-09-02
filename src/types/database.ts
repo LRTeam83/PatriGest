@@ -16,8 +16,9 @@ type FinancialAccountStatus = "active" | "closed";
 export type CategoryUsage = "income" | "expense" | "both";
 export type TransactionType = "income" | "expense" | "transfer_in" | "transfer_out";
 export type DossierAccessRole = "owner" | "manager" | "read_only";
-type SharedAccessRole = Exclude<DossierAccessRole, "owner">;
+export type SharedAccessRole = Exclude<DossierAccessRole, "owner">;
 type AccountRequestStatus = "pending" | "approved" | "rejected";
+export type ApplicationUserAuthorizationStatus = "pending" | "active" | "rejected";
 export type PropertyType = "house" | "apartment" | "land" | "commercial" | "other";
 export type PropertyEntryMode = "acquisition" | "inheritance" | "donation" | "other";
 export type PropertyStatus = "active" | "disposed";
@@ -36,6 +37,12 @@ export type Database = {
         Row: { id: string; first_name: string | null; last_name: string | null; last_seen_version: string | null; created_at: string; updated_at: string };
         Insert: { id: string; first_name?: string | null; last_name?: string | null; last_seen_version?: string | null; created_at?: string; updated_at?: string };
         Update: { first_name?: string | null; last_name?: string | null; last_seen_version?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      application_user_authorizations: {
+        Row: { user_id: string; status: ApplicationUserAuthorizationStatus; status_changed_at: string; status_changed_by: string | null; created_at: string; updated_at: string };
+        Insert: { user_id: string; status?: ApplicationUserAuthorizationStatus; status_changed_at?: string; status_changed_by?: string | null; created_at?: string; updated_at?: string };
+        Update: { status?: ApplicationUserAuthorizationStatus; status_changed_at?: string; status_changed_by?: string | null; updated_at?: string };
         Relationships: [];
       };
       protected_persons: {
@@ -149,9 +156,9 @@ export type Database = {
         Relationships: [];
       };
       protected_person_invitations: {
-        Row: { id: string; protected_person_id: string; email: string; role: SharedAccessRole; token_hash: string; expires_at: string; accepted_at: string | null; invited_by: string; created_at: string };
-        Insert: { id?: string; protected_person_id: string; email: string; role: SharedAccessRole; token_hash: string; expires_at: string; accepted_at?: string | null; invited_by: string; created_at?: string };
-        Update: { role?: SharedAccessRole; expires_at?: string; accepted_at?: string | null };
+        Row: { id: string; protected_person_id: string; email: string; role: SharedAccessRole; token_hash: string; expires_at: string; accepted_at: string | null; revoked_at: string | null; invited_by: string; created_at: string };
+        Insert: { id?: string; protected_person_id: string; email: string; role: SharedAccessRole; token_hash: string; expires_at: string; accepted_at?: string | null; revoked_at?: string | null; invited_by: string; created_at?: string };
+        Update: { role?: SharedAccessRole; expires_at?: string; accepted_at?: string | null; revoked_at?: string | null };
         Relationships: [];
       };
       categories: {
@@ -260,10 +267,16 @@ export type Database = {
     Views: Record<string, never>;
     Functions: {
       is_platform_admin: { Args: Record<string, never>; Returns: boolean };
+      is_application_user_active: { Args: Record<string, never>; Returns: boolean };
+      review_application_user_registration: { Args: { p_user_id: string; p_decision: "active" | "rejected" }; Returns: "active" | "rejected" };
       is_protected_person_owner: { Args: { person_id: string }; Returns: boolean };
       can_read_protected_person: { Args: { person_id: string }; Returns: boolean };
       can_manage_protected_person: { Args: { person_id: string }; Returns: boolean };
       accept_protected_person_invitation: { Args: { p_token_hash: string }; Returns: string };
+      issue_protected_person_invitation: { Args: { p_protected_person_id: string; p_email: string; p_role: SharedAccessRole; p_token_hash: string; p_expires_at: string }; Returns: string };
+      reissue_protected_person_invitation: { Args: { p_invitation_id: string; p_token_hash: string; p_expires_at: string }; Returns: string };
+      revoke_protected_person_invitation: { Args: { p_invitation_id: string }; Returns: undefined };
+      remove_protected_person_access: { Args: { p_protected_person_id: string; p_access_id: string }; Returns: undefined };
       create_internal_transfer: { Args: { p_protected_person_id: string; p_source_account_id: string; p_destination_account_id: string; p_transfer_date: string; p_amount: number; p_label?: string | null; p_comment?: string | null }; Returns: string };
       delete_internal_transfer: { Args: { p_transfer_id: string }; Returns: undefined };
       delete_empty_financial_account: { Args: { p_account_id: string }; Returns: undefined };

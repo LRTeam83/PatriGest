@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { sendApplicationActivationEmail } from "../registration-email";
 
 export async function requirePlatformAdministrator() {
   const supabase = await createClient();
@@ -21,21 +22,103 @@ export async function getAccountRequests() {
   return data;
 }
 
+export async function getPendingApplicationRegistrations() {
+  await requirePlatformAdministrator();
+  const admin = createAdminClient();
+  const { data: authorizations, error } = await admin
+    .from("application_user_authorizations")
+    .select("user_id,status,created_at")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error("Impossible de charger les inscriptions en attente.");
+  if (!authorizations.length) return [];
+
+  const ids = authorizations.map((authorization) => authorization.user_id);
+  const [users, { data: profiles, error: profileError }] = await Promise.all([
+    getAllAuthUsers(admin),
+    admin.from("profiles").select("id,first_name,last_name").in("id", ids),
+  ]);
+  if (profileError) throw new Error("Impossible de charger les inscriptions en attente.");
+  const userById = new Map(users.map((user) => [user.id, user]));
+  const profileById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
+
+  return authorizations.flatMap((authorization) => {
+    const user = userById.get(authorization.user_id);
+    if (!user?.email_confirmed_at) return [];
+    return [{
+      userId: authorization.user_id,
+      email: user.email ?? "",
+      firstName: profileById.get(authorization.user_id)?.first_name ?? "",
+      lastName: profileById.get(authorization.user_id)?.last_name ?? "",
+      createdAt: user.created_at,
+      emailConfirmedAt: user.email_confirmed_at,
+      status: authorization.status,
+    }];
+  });
+}
+
+export async function reviewApplicationRegistration(userId: string, decision: "active" | "rejected") {
+  const { supabase } = await requirePlatformAdministrator();
+  const admin = createAdminClient();
+  const [{ data: targetResult, error: targetError }, { data: profile, error: profileError }] = await Promise.all([
+    admin.auth.admin.getUserById(userId),
+    admin.from("profiles").select("first_name,last_name").eq("id", userId).maybeSingle(),
+  ]);
+  if (targetError || !targetResult.user || profileError) throw new Error("Inscription introuvable.");
+  if (!targetResult.user.email_confirmed_at) throw new Error("L’adresse e-mail doit être confirmée avant validation.");
+
+  const { error } = await supabase.rpc("review_application_user_registration", {
+    p_user_id: userId,
+    p_decision: decision,
+  });
+  if (error) {
+    if (error.message.includes("déjà été traitée")) throw new Error("Cette inscription a déjà été traitée.");
+    throw new Error("Impossible de traiter cette inscription.");
+  }
+
+  if (decision === "rejected") return { emailSent: false };
+  try {
+    await sendApplicationActivationEmail({
+      email: targetResult.user.email ?? "",
+      firstName: profile?.first_name ?? "",
+    });
+    return { emailSent: true };
+  } catch {
+    return { emailSent: false };
+  }
+}
+
+export async function resendApplicationActivationEmail(userId: string) {
+  await requirePlatformAdministrator();
+  const admin = createAdminClient();
+  const [{ data: targetResult, error: targetError }, { data: authorization, error: authorizationError }, { data: profile, error: profileError }] = await Promise.all([
+    admin.auth.admin.getUserById(userId),
+    admin.from("application_user_authorizations").select("status").eq("user_id", userId).maybeSingle(),
+    admin.from("profiles").select("first_name").eq("id", userId).maybeSingle(),
+  ]);
+  if (targetError || !targetResult.user || authorizationError || profileError) throw new Error("Compte utilisateur introuvable.");
+  if (authorization?.status !== "active") throw new Error("L’accès de ce compte n’est pas actif.");
+  if (!targetResult.user.email) throw new Error("Aucune adresse e-mail n’est disponible pour ce compte.");
+  await sendApplicationActivationEmail({ email: targetResult.user.email, firstName: profile?.first_name ?? "" });
+}
+
 export async function getPlatformUsers() {
   const { userId: currentUserId } = await requirePlatformAdministrator();
   const admin = createAdminClient();
   const users = await getAllAuthUsers(admin);
   const ids = users.map((user) => user.id);
-  const [{ data: profiles }, { data: owned }, { data: administrators }] = await Promise.all([
+  const [{ data: profiles }, { data: owned }, { data: administrators }, { data: authorizations }] = await Promise.all([
     ids.length ? admin.from("profiles").select("id,first_name,last_name").in("id", ids) : Promise.resolve({ data: [] }),
     ids.length ? admin.from("protected_persons").select("owner_id").in("owner_id", ids) : Promise.resolve({ data: [] }),
     ids.length ? admin.from("platform_administrators").select("user_id").in("user_id", ids) : Promise.resolve({ data: [] }),
+    ids.length ? admin.from("application_user_authorizations").select("user_id,status").in("user_id", ids) : Promise.resolve({ data: [] }),
   ]);
   const profileById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
   const counts = new Map<string, number>();
   for (const person of owned ?? []) counts.set(person.owner_id, (counts.get(person.owner_id) ?? 0) + 1);
   const administratorIds = new Set((administrators ?? []).map((administrator) => administrator.user_id));
-  return users.map((user) => ({ id: user.id, email: user.email ?? "", createdAt: user.created_at, firstName: profileById.get(user.id)?.first_name ?? "", lastName: profileById.get(user.id)?.last_name ?? "", ownedDossiers: counts.get(user.id) ?? 0, canDelete: user.id !== currentUserId && !administratorIds.has(user.id) }));
+  const authorizationById = new Map((authorizations ?? []).map((authorization) => [authorization.user_id, authorization.status]));
+  return users.map((user) => ({ id: user.id, email: user.email ?? "", createdAt: user.created_at, firstName: profileById.get(user.id)?.first_name ?? "", lastName: profileById.get(user.id)?.last_name ?? "", ownedDossiers: counts.get(user.id) ?? 0, authorizationStatus: authorizationById.get(user.id), canResendActivationEmail: authorizationById.get(user.id) === "active" && !administratorIds.has(user.id), canDelete: user.id !== currentUserId && !administratorIds.has(user.id) }));
 }
 
 export async function deletePlatformUser(userId: string) {
@@ -71,16 +154,18 @@ export type AdministrationDashboardData = {
   pendingRequestsCount: number;
   pendingInvitationsCount: number;
   pendingRequests: Awaited<ReturnType<typeof getAccountRequests>>;
+  pendingRegistrations: Awaited<ReturnType<typeof getPendingApplicationRegistrations>>;
 };
 
 export async function getAdministrationDashboardData(): Promise<AdministrationDashboardData> {
   const { supabase } = await requirePlatformAdministrator();
   const admin = createAdminClient();
   const now = new Date().toISOString();
-  const [users, requestsResult, invitationsResult] = await Promise.all([
+  const [users, requestsResult, invitationsResult, pendingRegistrations] = await Promise.all([
     getAllAuthUsers(admin),
     supabase.from("account_requests").select("*").eq("status", "pending").order("created_at", { ascending: false }),
-    admin.from("protected_person_invitations").select("id", { count: "exact", head: true }).is("accepted_at", null).gt("expires_at", now),
+    admin.from("protected_person_invitations").select("id", { count: "exact", head: true }).is("accepted_at", null).is("revoked_at", null).gt("expires_at", now),
+    getPendingApplicationRegistrations(),
   ]);
 
   if (requestsResult.error || invitationsResult.error) {
@@ -89,9 +174,10 @@ export async function getAdministrationDashboardData(): Promise<AdministrationDa
 
   return {
     usersCount: users.length,
-    pendingRequestsCount: requestsResult.data.length,
+    pendingRequestsCount: pendingRegistrations.length,
     pendingInvitationsCount: invitationsResult.count ?? 0,
     pendingRequests: requestsResult.data.slice(0, 5),
+    pendingRegistrations: pendingRegistrations.slice(0, 5),
   };
 }
 

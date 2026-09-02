@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getAuthErrorMessage } from "@/lib/auth/errors";
 import {
-  getApplicationOrigin,
+  getAuthCallbackOrigin,
   getPasswordRecoveryRedirectUrl,
   getSafeNextPath,
 } from "@/lib/auth/redirects";
@@ -51,10 +51,12 @@ export async function loginAction(_state: AuthActionState, formData: FormData): 
 }
 
 export async function signupAction(_state: AuthActionState, formData: FormData): Promise<AuthActionState> {
-  const invitationToken = z.string().min(32).safeParse(formData.get("invitationToken"));
-  if (!invitationToken.success) return { status: "error", message: "Cette invitation est invalide ou a expiré." };
-  const invitation = await validateSignupInvitation(invitationToken.data);
-  if (!invitation) return { status: "error", message: "Cette invitation est invalide ou a expiré." };
+  const invitationTokenValue = formData.get("invitationToken");
+  const hasInvitation = typeof invitationTokenValue === "string" && invitationTokenValue.length > 0;
+  const invitationToken = hasInvitation ? z.string().min(32).safeParse(invitationTokenValue) : null;
+  if (invitationToken && !invitationToken.success) return { status: "error", message: "Cette invitation est invalide ou a expiré." };
+  const invitation = invitationToken?.success ? await validateSignupInvitation(invitationToken.data) : null;
+  if (hasInvitation && !invitation) return { status: "error", message: "Cette invitation est invalide ou a expiré." };
   const parsed = signupSchema.safeParse({
     email: formData.get("email"),
     firstName: formData.get("firstName"),
@@ -63,23 +65,27 @@ export async function signupAction(_state: AuthActionState, formData: FormData):
     passwordConfirmation: formData.get("passwordConfirmation"),
   });
   if (!parsed.success) return validationError(parsed.error);
-  if (parsed.data.email.toLowerCase() !== invitation.email.toLowerCase()) return { status: "error", message: "Utilisez l’adresse email associée à cette invitation." };
+  if (invitation && parsed.data.email.toLowerCase() !== invitation.email.toLowerCase()) return { status: "error", message: "Utilisez l’adresse email associée à cette invitation." };
 
-  const origin = await getApplicationOrigin();
+  const origin = await getAuthCallbackOrigin();
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data: signupData, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      emailRedirectTo: `${origin}/auth/callback${invitation.kind === "dossier" ? `?next=${encodeURIComponent(`/invitation/${invitationToken.data}`)}` : ""}`,
+      emailRedirectTo: `${origin}/auth/callback${invitation?.kind === "dossier" && invitationToken?.success ? `?next=${encodeURIComponent(`/invitation/${invitationToken.data}`)}` : ""}`,
       data: { first_name: parsed.data.firstName, last_name: parsed.data.lastName },
     },
   });
+  if (error?.code === "user_already_exists") {
+    return { status: "success", message: "Vérifiez votre messagerie pour poursuivre votre inscription." };
+  }
   if (error) {
     return { status: "error", message: getAuthErrorMessage(error, "Impossible de créer le compte. Réessayez dans quelques instants.") };
   }
-  if (invitation.kind === "account") await markSignupInvitationUsed(invitationToken.data);
-  return { status: "success", message: "Votre compte a été créé. Consultez votre messagerie et confirmez votre adresse email avant de vous connecter." };
+  const accountWasCreated = Boolean(signupData.user?.identities?.length);
+  if (accountWasCreated && invitation?.kind === "account" && invitationToken?.success) await markSignupInvitationUsed(invitationToken.data);
+  return { status: "success", message: "Confirmez votre adresse e-mail pour transmettre votre inscription à validation." };
 }
 
 export async function forgotPasswordAction(_state: AuthActionState, formData: FormData): Promise<AuthActionState> {

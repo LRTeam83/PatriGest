@@ -1,11 +1,24 @@
 import { headers } from "next/headers";
 
-const allowedHosts = new Set([
-  "patrigest.fr",
-  "www.patrigest.fr",
-  "localhost",
-  "127.0.0.1",
+const allowedApplicationOrigins = new Set([
+  "https://patrigest.fr",
+  "https://www.patrigest.fr",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
 ]);
+
+const canonicalApplicationOrigin = "https://patrigest.fr";
+
+function getAllowedApplicationOrigin(value: string | null | undefined) {
+  if (!value) return null;
+
+  try {
+    const origin = new URL(value).origin;
+    return allowedApplicationOrigins.has(origin) ? origin : null;
+  } catch {
+    return null;
+  }
+}
 
 export function getSafeNextPath(value: string | null, fallback: string) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
@@ -16,26 +29,22 @@ export function getSafeNextPath(value: string | null, fallback: string) {
 }
 
 export async function getApplicationOrigin() {
+  const configuredOrigin = getAllowedApplicationOrigin(process.env.APP_URL);
+  if (configuredOrigin) return configuredOrigin;
+
+  return canonicalApplicationOrigin;
+}
+
+export async function getAuthCallbackOrigin() {
   const requestHeaders = await headers();
-  const origin = requestHeaders.get("origin");
+  const requestOrigin = getAllowedApplicationOrigin(requestHeaders.get("origin"));
+  if (requestOrigin) return requestOrigin;
 
-  if (origin) {
-    try {
-      const parsedOrigin = new URL(origin);
-
-      if (allowedHosts.has(parsedOrigin.hostname)) {
-        return parsedOrigin.origin;
-      }
-    } catch {
-      // Une origine mal formée est ignorée au profit du domaine canonique.
-    }
-  }
-
-  return "https://patrigest.fr";
+  return getApplicationOrigin();
 }
 
 export async function getPasswordRecoveryRedirectUrl() {
-  const origin = await getApplicationOrigin();
+  const origin = await getAuthCallbackOrigin();
 
   return `${origin}/auth/callback?next=/nouveau-mot-de-passe`;
 }

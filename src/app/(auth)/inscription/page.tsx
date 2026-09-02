@@ -7,7 +7,11 @@ export const metadata: Metadata = { title: "Créer un compte" };
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const { token } = await searchParams;
-  const invitation = token ? await validateSignupInvitation(token) : null;
-  if (!token || !invitation) return <AuthShell title="Invitation requise" description="L’inscription à PatriGest est accessible uniquement sur invitation."><p className="text-sm leading-6 text-[#64748B]">Cette invitation est invalide ou a expiré. Vous pouvez demander un accès depuis la page publique.</p></AuthShell>;
-  return <AuthShell title="Créer un compte" description="Votre invitation a été vérifiée."><SignupForm invitationToken={token} email={invitation.email} firstName={invitation.first_name} lastName={invitation.last_name} /></AuthShell>;
+  if (!token) {
+    return <AuthShell title="Créer votre compte PatriGest" description="PatriGest est actuellement accessible sur validation. Créez votre compte ci-dessous. Après confirmation de votre adresse e-mail, votre inscription sera examinée avant l’activation de votre accès."><SignupForm /></AuthShell>;
+  }
+
+  const invitation = await validateSignupInvitation(token);
+  if (!invitation) return <AuthShell title="Invitation invalide" description="Ce lien d’inscription n’est plus disponible."><p className="text-sm leading-6 text-[#64748B]">Cette invitation est invalide, expirée ou a déjà été utilisée. Vous pouvez créer un compte sans invitation ou vous connecter si vous êtes déjà inscrit.</p><div className="mt-4 flex flex-wrap gap-3"><a className="button button-primary" href="/inscription">Créer un compte</a><a className="button button-secondary" href="/connexion">Se connecter</a></div></AuthShell>;
+  return <AuthShell title="Créer votre compte PatriGest" description="Votre invitation a été vérifiée. Créez votre compte puis confirmez votre adresse e-mail."><SignupForm invitationToken={token} email={invitation.email} firstName={invitation.first_name} lastName={invitation.last_name} /></AuthShell>;
 }

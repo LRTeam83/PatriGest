@@ -7,5 +7,18 @@ export async function getAuthenticatedUser() {
 
   if (error || !userId) throw new Error("UNAUTHENTICATED");
 
+  const [{ data: authorization, error: authorizationError }, { data: administrator, error: administratorError }] = await Promise.all([
+    supabase.from("application_user_authorizations").select("status").eq("user_id", userId).maybeSingle(),
+    supabase.from("platform_administrators").select("user_id").eq("user_id", userId).maybeSingle(),
+  ]);
+
+  if (authorizationError || administratorError) {
+    throw new Error("Impossible de vérifier l’autorisation d’accès.");
+  }
+
+  if (!administrator && authorization?.status !== "active") {
+    throw new Error("APPLICATION_ACCESS_DENIED");
+  }
+
   return { supabase, userId };
 }

@@ -18,8 +18,8 @@ export function PrivateNavigation({ current, dossier, isPlatformAdmin = false }:
   const closeRef = useRef<HTMLButtonElement>(null);
   const principal: NavigationItem[] = isPlatformAdmin ? [
     { label: "Tableau de bord", href: "/tableau-de-bord", icon: LayoutDashboard, active: current === "dashboard" || current === "administration" },
-    { label: "Demandes d’accès", href: "/administration/demandes", icon: ShieldCheck, active: current === "administration-requests" },
-    { label: "Utilisateurs", href: "/administration/utilisateurs", icon: Users, active: current === "administration-users" },
+    { label: "Inscriptions à valider", href: "/administration/demandes", icon: ShieldCheck, active: current === "administration-requests" },
+    { label: "Comptes utilisateurs", href: "/administration/utilisateurs", icon: Users, active: current === "administration-users" },
   ] : [
     { label: "Tableau de bord", href: "/tableau-de-bord", icon: LayoutDashboard, active: current === "dashboard" },
     { label: "Dossiers", href: "/dossiers", icon: FolderOpen, active: current === "dossiers" && !dossier },
@@ -32,7 +32,7 @@ export function PrivateNavigation({ current, dossier, isPlatformAdmin = false }:
     { label: "Exercices de gestion", href: `/dossiers/${dossier.id}/exercices`, icon: CalendarRange, active: dossier.current === "periods" },
     { label: "Comptes de gestion", href: `/dossiers/${dossier.id}/comptes-de-gestion`, icon: ClipboardList, active: dossier.current === "reports" },
     { label: "Informations du dossier", href: `/dossiers/${dossier.id}`, icon: LayoutGrid, active: dossier.current === "overview" },
-    ...(dossier.accessRole === "owner" ? [{ label: "Accès au dossier", href: `/dossiers/${dossier.id}/acces`, icon: Users, active: dossier.current === "access" }] : []),
+    ...(dossier.accessRole === "owner" || dossier.accessRole === "manager" ? [{ label: "Accès au dossier", href: `/dossiers/${dossier.id}/acces`, icon: Users, active: dossier.current === "access" }] : []),
   ] : [];
   const settings: NavigationItem[] = isPlatformAdmin ? [] : [{ label: "Catégories", href: "/parametres/categories", icon: Settings, active: current === "settings" }];
 

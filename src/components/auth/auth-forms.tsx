@@ -49,22 +49,30 @@ export function LoginForm({ initialState = initialAuthState, nextPath }: { initi
       <div className="flex justify-end"><Link className="auth-link text-sm" href="/mot-de-passe-oublie">Mot de passe oublié ?</Link></div>
       <FormMessage state={state} />
       <SubmitButton pendingLabel="Connexion…">Se connecter</SubmitButton>
-      <p className="text-center text-sm text-[#64748B]">Pas encore de compte ? <Link className="auth-link" href="/demande-acces">Demander un accès</Link></p>
+      <p className="text-center text-sm text-[#64748B]">Pas encore de compte ? <Link className="auth-link" href="/inscription">Créer un compte</Link></p>
       <Link className="auth-back-link" href="/">Retour à l’accueil</Link>
     </form>
   );
 }
 
-export function SignupForm({ invitationToken, email, firstName, lastName }: { invitationToken: string; email: string; firstName?: string; lastName?: string }) {
+export function SignupForm({ invitationToken, email, firstName, lastName }: { invitationToken?: string; email?: string; firstName?: string; lastName?: string }) {
   const [state, action] = useActionState(signupAction, initialAuthState);
+  if (state.status === "success") {
+    return <div className="rounded-xl bg-green-50 px-4 py-4 text-green-900" role="status" aria-live="polite">
+      <h2 className="font-bold">Confirmez votre adresse e-mail</h2>
+      <p className="mt-2 text-sm leading-6">Un e-mail de confirmation vient de vous être envoyé. Cliquez sur le lien qu’il contient pour confirmer votre adresse e-mail.</p>
+      <p className="mt-2 text-sm leading-6">Après confirmation, votre inscription sera transmise pour validation.</p>
+      <Link className="auth-link mt-4 inline-block text-sm" href="/connexion">Retour à la connexion</Link>
+    </div>;
+  }
   return (
     <form action={action} className="space-y-4">
-      <input type="hidden" name="invitationToken" value={invitationToken} />
+      {invitationToken && <input type="hidden" name="invitationToken" value={invitationToken} />}
+      <Field id="email" label="Adresse email" type="email" autoComplete="email" errors={state.fieldErrors?.email} defaultValue={email} readOnly={Boolean(invitationToken)} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field id="firstName" label="Prénom" autoComplete="given-name" errors={state.fieldErrors?.firstName} defaultValue={firstName} />
         <Field id="lastName" label="Nom" autoComplete="family-name" errors={state.fieldErrors?.lastName} defaultValue={lastName} />
       </div>
-      <Field id="email" label="Adresse email" type="email" autoComplete="email" errors={state.fieldErrors?.email} defaultValue={email} readOnly />
       <Field id="password" label="Mot de passe" type="password" autoComplete="new-password" errors={state.fieldErrors?.password} />
       <Field id="passwordConfirmation" label="Confirmation du mot de passe" type="password" autoComplete="new-password" errors={state.fieldErrors?.passwordConfirmation} />
       <p className="text-xs leading-5 text-[#64748B]">Utilisez au moins 8 caractères. Un mot de passe long et unique protège mieux vos données.</p>
