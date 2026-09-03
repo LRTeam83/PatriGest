@@ -65,6 +65,7 @@ export async function signupAction(_state: AuthActionState, formData: FormData):
     passwordConfirmation: formData.get("passwordConfirmation"),
   });
   if (!parsed.success) return validationError(parsed.error);
+  const normalizedEmail = parsed.data.email.toLowerCase();
   if (invitation && parsed.data.email.toLowerCase() !== invitation.email.toLowerCase()) return { status: "error", message: "Utilisez l’adresse email associée à cette invitation." };
 
   const origin = await getAuthCallbackOrigin();
@@ -78,14 +79,14 @@ export async function signupAction(_state: AuthActionState, formData: FormData):
     },
   });
   if (error?.code === "user_already_exists") {
-    return { status: "success", message: "Vérifiez votre messagerie pour poursuivre votre inscription." };
+    return { status: "success", message: "Vérifiez votre messagerie pour poursuivre votre inscription.", email: normalizedEmail };
   }
   if (error) {
     return { status: "error", message: getAuthErrorMessage(error, "Impossible de créer le compte. Réessayez dans quelques instants.") };
   }
   const accountWasCreated = Boolean(signupData.user?.identities?.length);
   if (accountWasCreated && invitation?.kind === "account" && invitationToken?.success) await markSignupInvitationUsed(invitationToken.data);
-  return { status: "success", message: "Confirmez votre adresse e-mail pour transmettre votre inscription à validation." };
+  return { status: "success", message: "Confirmez votre adresse e-mail pour transmettre votre inscription à validation.", email: normalizedEmail };
 }
 
 export async function forgotPasswordAction(_state: AuthActionState, formData: FormData): Promise<AuthActionState> {

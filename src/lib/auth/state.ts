@@ -3,6 +3,7 @@ export type AuthActionState = {
   message: string;
   fieldErrors?: Record<string, string[]>;
   redirectTo?: string;
+  email?: string;
 };
 
 export const initialAuthState: AuthActionState = {

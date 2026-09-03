@@ -59,10 +59,9 @@ export function SignupForm({ invitationToken, email, firstName, lastName }: { in
   const [state, action] = useActionState(signupAction, initialAuthState);
   if (state.status === "success") {
     return <div className="rounded-xl bg-green-50 px-4 py-4 text-green-900" role="status" aria-live="polite">
-      <h2 className="font-bold">Confirmez votre adresse e-mail</h2>
-      <p className="mt-2 text-sm leading-6">Un e-mail de confirmation vient de vous être envoyé. Cliquez sur le lien qu’il contient pour confirmer votre adresse e-mail.</p>
-      <p className="mt-2 text-sm leading-6">Après confirmation, votre inscription sera transmise pour validation.</p>
-      <Link className="auth-link mt-4 inline-block text-sm" href="/connexion">Retour à la connexion</Link>
+      <h2 className="font-bold">Vérifiez votre adresse e-mail</h2>
+      <p className="mt-2 text-sm leading-6">Si l’adresse <strong className="break-all font-semibold">{state.email}</strong> peut être inscrite, un e-mail de confirmation lui a été envoyé.</p>
+      <p className="mt-2 text-sm leading-6">Si vous disposez déjà d’un compte PatriGest, <Link className="auth-link" href="/connexion">connectez-vous</Link> ou utilisez la <Link className="auth-link" href="/mot-de-passe-oublie">procédure de mot de passe oublié</Link>.</p>
     </div>;
   }
   return (
