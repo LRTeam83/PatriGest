@@ -135,7 +135,7 @@ export async function deletePlatformUser(userId: string) {
     admin.from("protected_person_access").select("id").eq("user_id", userId).limit(1),
     admin.from("protected_person_access").select("id").eq("invited_by", userId).limit(1),
     admin.from("protected_person_invitations").select("id").eq("invited_by", userId).limit(1),
-    email ? admin.from("protected_person_invitations").select("id").ilike("email", email).is("accepted_at", null).gt("expires_at", now).limit(1) : Promise.resolve({ data: [], error: null }),
+    email ? admin.from("protected_person_invitations").select("id").ilike("email", email).is("accepted_at", null).is("revoked_at", null).gt("expires_at", now).limit(1) : Promise.resolve({ data: [], error: null }),
     admin.from("categories").select("id").eq("owner_id", userId).limit(1),
     admin.from("transaction_documents").select("id").eq("created_by", userId).limit(1),
   ]);
