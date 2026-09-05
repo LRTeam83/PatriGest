@@ -204,6 +204,8 @@ L'entrée redondante **Gérer les dossiers** est à supprimer à terme. `/dossie
 
 **Exercices de gestion** n'a pas nécessairement à rester dans le menu permanent ; il reste accessible depuis Informations du dossier et le compte de gestion. **Comptes et patrimoine** doit évoluer vers **Gestion financière**, avec une sous-navigation envisagée : Comptes, Opérations, Relevés.
 
+Dans **Opérations**, **Ajouter une opération** reste destiné à une opération ponctuelle. Dans **Relevés**, **Ajouter un relevé** correspond à l'archivage simple ; un futur accès devra permettre la saisie et le contrôle à partir d'un relevé existant ou nouveau. Aucune route précise n'est arrêtée à ce stade.
+
 Immobilier et Dettes restent liés à la situation et aux informations du dossier, ainsi qu'à son tableau de bord, plutôt qu'à la navigation bancaire quotidienne. Les droits owner, manager et read_only doivent être strictement respectés.
 
 ## 24. Dossiers / Gérer les dossiers — NAV-09 / ONB-11
@@ -251,11 +253,125 @@ Sont conservés pour l'instant : Catégories, Mon compte, Historique des version
 
 Cet ordre **n'est pas encore le plan d'implémentation définitif**.
 
-## 27. Audit restant
+## 27. Audit 16 — Relevés bancaires
+
+### Fonctionnement observé
+
+La page **Relevés bancaires** d'un compte affiche une liste comprenant la date du relevé, sa période, son solde, son document et les actions **Voir**, **Télécharger**, **Modifier** et **Supprimer**. Sur le compte audité, la liste contient 33 relevés. Un exemple réel observé présente les informations suivantes :
+
+- Date du relevé : 10/01/2026
+- Période : 11/12/2025 → 10/01/2026
+- Solde du relevé : 7 112,31 €
+
+L'action **Voir** affiche actuellement le PDF du relevé. Le formulaire **Ajouter un relevé** contient : date de début facultative, date de fin, solde final facultatif, note facultative et fichier PDF.
+
+Le fonctionnement actuel correspond principalement à un archivage structuré du relevé bancaire et de son PDF. L'interface actuelle n'expose pas de liaison fonctionnelle visible entre un relevé et les opérations de sa période. Cela ne permet pas d'affirmer qu'une telle liaison est techniquement inexistante en base ; ce point exige un audit du code et du modèle.
+
+### REL-01 — Conserver la notion existante de relevé bancaire
+
+**Priorité : Très haute**
+
+PatriGest possède déjà une notion de relevé bancaire comprenant une période, un solde final, une note et un PDF. La future saisie successive des opérations ne doit pas créer inutilement une seconde notion concurrente. Le modèle et les fonctionnalités existants doivent être réutilisés autant que possible.
+
+### REL-02 — Étudier l'intégration Relevé ↔ opérations ↔ rapprochement
+
+**Priorité : Très haute**
+
+Le futur workflow de saisie successive doit être conçu en tenant compte des relevés existants. L'objectif cible à étudier est :
+
+Relevé bancaire → période → document PDF → opérations de la période → solde calculé → solde indiqué sur le relevé → écart → état de rapprochement.
+
+Ce workflow ne doit pas être implémenté avant l'audit technique du modèle existant.
+
+### REL-03 — Conserver l'archivage simple des relevés
+
+**Priorité : Haute**
+
+L'utilisateur doit continuer à pouvoir enregistrer un relevé et son PDF sans devoir immédiatement effectuer une saisie complète ou un rapprochement. **Ajouter un relevé** doit rester une action simple d'archivage documentaire et ne pas devenir un processus lourd obligatoire.
+
+### REL-04 — Workflow futur Relevé + opérations
+
+**Priorité : Très haute**
+
+À terme, un workflow doit permettre de saisir successivement les opérations dans le contexte d'un relevé bancaire. Exemple conceptuel :
+
+- Compte : SG CC - 2802 - PL
+- Période : 11/12/2025 → 10/01/2026
+- Solde final du relevé : 7 112,31 €
+
+La saisie successive comprend date, libellé, catégorie, Dépense/Recette, montant et justificatif. Après chaque ligne, PatriGest enregistre l'opération, permet l'ajout immédiat de son justificatif, prépare immédiatement la ligne suivante et ne retourne pas au journal des opérations. Les opérations saisies pendant la session doivent être affichées si possible.
+
+Cette décision complète UX-21 à UX-25.
+
+### REL-05 — Ne jamais supposer une période mensuelle civile
+
+**Priorité : Très haute**
+
+Un relevé bancaire ne couvre pas nécessairement le premier au dernier jour d'un mois. L'exemple réel **11/12/2025 → 10/01/2026** le confirme : la banque détermine la période. PatriGest doit conserver des dates de début et de fin explicites et ne pas imposer automatiquement un mois civil.
+
+### REL-06 — Exploiter le solde final pour le contrôle
+
+**Priorité : Très haute**
+
+Le solde final déjà enregistré doit pouvoir servir ultérieurement au contrôle des opérations :
+
+Solde de départ + mouvements de la période = solde calculé.
+
+Ce solde calculé est ensuite comparé au solde final indiqué sur le relevé afin d'afficher l'écart. Exemple : solde calculé 7 112,31 €, solde du relevé 7 112,31 €, écart 0,00 €. Cette décision complète MET-06 sur le rapprochement bancaire.
+
+### REL-07 — Prévoir un état de rapprochement
+
+**Priorité : Haute**
+
+À terme, un relevé pourrait avoir un état distinguant, par exemple, **non rapproché**, **à contrôler** et **rapproché**. Les états exacts et leur modèle de données ne sont pas validés. Aucun schéma ni migration ne doit être défini à ce stade. L'objectif ergonomique est uniquement de permettre à l'utilisateur de savoir si le relevé a été contrôlé par rapport aux opérations.
+
+### REL-08 — Réutiliser un relevé déjà archivé
+
+**Priorité : Haute**
+
+Un relevé déjà enregistré dans PatriGest ne doit pas être recréé pour commencer sa saisie ou son rapprochement. Le futur workflow doit pouvoir partir d'un relevé existant.
+
+### Distinction entre Ajouter un relevé et Saisir un relevé
+
+**Ajouter un relevé** sert à archiver le relevé bancaire : période, solde final, note et PDF. Cette action doit rester simple.
+
+**Saisir un relevé** sert à travailler à partir d'un relevé pour saisir successivement ses opérations et, à terme, vérifier leur cohérence avec le solde bancaire. Cette fonction n'existe pas encore sous cette forme et reste à concevoir.
+
+Le vocabulaire définitif reste à valider. **Saisir un relevé** est actuellement préféré pour l'utilisateur à un terme plus technique comme **Rapprocher**, sans constituer une décision définitive.
+
+### Justificatifs pendant la saisie
+
+Conformément à UX-25, après chaque opération enregistrée pendant la future saisie successive, la référence du justificatif est attribuée selon le mécanisme existant. L'utilisateur doit pouvoir joindre immédiatement le justificatif ou passer à l'opération suivante lorsqu'il n'est pas disponible, afin d'éviter de reprendre individuellement plusieurs dizaines d'opérations.
+
+### UX-34 — Densité des actions dans la liste des relevés
+
+**Priorité : Basse**
+
+La liste affiche actuellement **Voir / Télécharger / Modifier / Supprimer** pour chaque relevé. Avec plusieurs dizaines de relevés, cet affichage devient dense. Il faudra étudier le maintien de **Voir** comme action principale, des actions secondaires moins envahissantes et éventuellement un menu d'actions. Aucune décision définitive d'interface n'est prise à ce stade.
+
+### Audit technique requis avant implémentation
+
+Avant toute implémentation de la saisie ou du rapprochement, l'audit du code et du modèle existants doit déterminer :
+
+- les tables utilisées pour les relevés ;
+- le stockage des dates de période ;
+- le stockage du solde final ;
+- le stockage ou la référence du PDF ;
+- la relation éventuelle avec les comptes ;
+- la relation éventuelle avec les opérations ;
+- les règles RLS ;
+- les droits owner, manager et read_only ;
+- le comportement de suppression d'un relevé ;
+- les éventuelles contraintes de période ;
+- la logique actuelle de calcul des soldes.
+
+Aucune migration ne doit être proposée avant cet audit technique.
+
+## 28. Audit restant
 
 À ce stade, l'audit ne doit pas être considéré comme terminé. Restent à examiner :
 
-1. Relevés bancaires
+1. Relevés bancaires — **AUDIT FONCTIONNEL INITIAL TERMINÉ** ; un audit technique du modèle des relevés est nécessaire avant implémentation
 2. Justificatifs et documents
 3. Compte de gestion
 4. Catégories
@@ -269,9 +385,9 @@ Cet ordre **n'est pas encore le plan d'implémentation définitif**.
 
 Le prochain audit prévu est :
 
-**Audit 16 — Relevés bancaires**
+**Audit 17 — Justificatifs et documents**
 
-## 28. Règles pour la suite
+## 29. Règles pour la suite
 
 - Ne pas implémenter une décision simplement parce qu'elle figure dans ce document.
 - Terminer l'audit avant de lancer la refonte globale.
