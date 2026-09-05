@@ -129,20 +129,25 @@ export async function deletePlatformUser(userId: string) {
   if (targetError || !targetResult.user) throw new Error("Utilisateur introuvable.");
   const email = targetResult.user.email ?? "";
   const now = new Date().toISOString();
-  const [administrator, owned, access, invitedAccess, invitations, activeInvitation, categories, documents] = await Promise.all([
+  const blockingRelations = await Promise.all([
     admin.from("platform_administrators").select("user_id").or(`user_id.eq.${userId},appointed_by.eq.${userId}`).limit(1),
     admin.from("protected_persons").select("id").eq("owner_id", userId).limit(1),
     admin.from("protected_person_access").select("id").eq("user_id", userId).limit(1),
-    admin.from("protected_person_access").select("id").eq("invited_by", userId).limit(1),
-    admin.from("protected_person_invitations").select("id").eq("invited_by", userId).limit(1),
+    admin.from("protected_person_invitations").select("id").eq("invited_by", userId).is("accepted_at", null).is("revoked_at", null).gt("expires_at", now).limit(1),
     email ? admin.from("protected_person_invitations").select("id").ilike("email", email).is("accepted_at", null).is("revoked_at", null).gt("expires_at", now).limit(1) : Promise.resolve({ data: [], error: null }),
     admin.from("categories").select("id").eq("owner_id", userId).limit(1),
     admin.from("transaction_documents").select("id").eq("created_by", userId).limit(1),
+    admin.from("bank_statements").select("id").eq("created_by", userId).limit(1),
+    admin.from("management_reports").select("id").eq("created_by", userId).limit(1),
+    admin.from("management_report_documents").select("id").eq("generated_by", userId).limit(1),
+    admin.from("management_report_transmissions").select("id").eq("declared_by", userId).limit(1),
+    admin.from("management_report_approvals").select("id").eq("declared_by", userId).limit(1),
+    admin.from("management_report_difficulties").select("id").eq("declared_by", userId).limit(1),
+    admin.from("management_report_account_selections").select("id").eq("created_by", userId).limit(1),
   ]);
-  const results = [administrator, owned, access, invitedAccess, invitations, activeInvitation, categories, documents];
-  if (results.some((result) => result.error)) throw new Error("Impossible de vérifier les dépendances de cet utilisateur.");
-  if (administrator.data?.length) throw new Error("Cet utilisateur possède encore une relation d’administration et ne peut pas être supprimé.");
-  if (owned.data?.length || access.data?.length || invitedAccess.data?.length || invitations.data?.length || activeInvitation.data?.length || categories.data?.length || documents.data?.length) {
+  if (blockingRelations.some((result) => result.error)) throw new Error("Impossible de vérifier les dépendances de cet utilisateur.");
+  if (blockingRelations[0].data?.length) throw new Error("Cet utilisateur possède encore une relation d’administration et ne peut pas être supprimé.");
+  if (blockingRelations.slice(1).some((result) => result.data?.length)) {
     throw new Error("Cet utilisateur ne peut pas être supprimé tant qu’il possède un dossier ou dispose encore d’un accès ou de données métier associées.");
   }
   const { error } = await admin.auth.admin.deleteUser(userId);

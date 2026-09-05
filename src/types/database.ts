@@ -150,14 +150,14 @@ export type Database = {
         Relationships: [];
       };
       protected_person_access: {
-        Row: { id: string; protected_person_id: string; user_id: string; role: SharedAccessRole; invited_by: string; created_at: string; updated_at: string };
-        Insert: { id?: string; protected_person_id: string; user_id: string; role: SharedAccessRole; invited_by: string; created_at?: string; updated_at?: string };
+        Row: { id: string; protected_person_id: string; user_id: string; role: SharedAccessRole; invited_by: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; protected_person_id: string; user_id: string; role: SharedAccessRole; invited_by: string | null; created_at?: string; updated_at?: string };
         Update: { role?: SharedAccessRole; updated_at?: string };
         Relationships: [];
       };
       protected_person_invitations: {
-        Row: { id: string; protected_person_id: string; email: string; role: SharedAccessRole; token_hash: string; expires_at: string; accepted_at: string | null; revoked_at: string | null; invited_by: string; created_at: string };
-        Insert: { id?: string; protected_person_id: string; email: string; role: SharedAccessRole; token_hash: string; expires_at: string; accepted_at?: string | null; revoked_at?: string | null; invited_by: string; created_at?: string };
+        Row: { id: string; protected_person_id: string; email: string; role: SharedAccessRole; token_hash: string; expires_at: string; accepted_at: string | null; revoked_at: string | null; invited_by: string | null; created_at: string };
+        Insert: { id?: string; protected_person_id: string; email: string; role: SharedAccessRole; token_hash: string; expires_at: string; accepted_at?: string | null; revoked_at?: string | null; invited_by: string | null; created_at?: string };
         Update: { role?: SharedAccessRole; expires_at?: string; accepted_at?: string | null; revoked_at?: string | null };
         Relationships: [];
       };

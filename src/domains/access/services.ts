@@ -21,13 +21,15 @@ export async function getInvitationPreview(token: string) {
   const status = getDossierInvitationStatus(data);
   if (status !== "pending") return { status };
 
-  const [ownerResult, userResult] = await Promise.all([
-    admin.from("profiles").select("first_name,last_name").eq("id", data.invited_by).maybeSingle(),
+  const [inviterResult, userResult] = await Promise.all([
+    data.invited_by
+      ? admin.from("profiles").select("first_name,last_name").eq("id", data.invited_by).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
     admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
   ]);
-  if (ownerResult.error || userResult.error) {
+  if (inviterResult.error || userResult.error) {
     console.error("[PatriGest] Échec du chargement d’une invitation valide", {
-      ownerCode: ownerResult.error?.code,
+      ownerCode: inviterResult.error?.code,
       userCode: userResult.error?.code,
     });
     return { status: "error" as const };
@@ -36,7 +38,9 @@ export async function getInvitationPreview(token: string) {
     status: "pending" as const,
     invitation: {
       ...data,
-      ownerName: [ownerResult.data?.first_name, ownerResult.data?.last_name].filter(Boolean).join(" ") || "Un utilisateur PatriGest",
+      ownerName: data.invited_by
+        ? [inviterResult.data?.first_name, inviterResult.data?.last_name].filter(Boolean).join(" ") || "Un utilisateur PatriGest"
+        : "Utilisateur supprimé",
       accountExists: userResult.data.users.some((user) => user.email?.toLowerCase() === data.email.toLowerCase()),
     },
   };
