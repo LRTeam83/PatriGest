@@ -484,7 +484,7 @@ Principe validé : **une rubrique complète se résume ; une rubrique incomplèt
 
 - Situation de fin indisponible — SG CC - 7306 - FL
 - Relevé manquant — Tarneaud Senior - 1358
-- 11 opérations sans classement officiel
+- 19 opérations sans classement officiel
 
 Une mise en évidence sobre mais nette, telle qu'un fond ou une bordure orange légère, peut signaler les éléments nécessitant une intervention. Il ne faut pas créer un nouveau moteur : PatriGest calcule déjà une grande partie de ces messages.
 
@@ -525,7 +525,7 @@ PatriGest possède 13 postes **Autre (précisez)** mais aucun champ de précisio
 
 La possibilité d'afficher un total officiel puis sa composition — par exemple Abonnements, Produits divers et Services divers — reste conceptuelle. Sa présentation PDF et sa portée réglementaire ne sont pas validées.
 
-Le moteur conserve actuellement seulement le nombre d'opérations non classées, pas leurs identifiants. L'objectif futur **11 opérations sans classement officiel → Voir et classer les 11 opérations** exige donc un audit préalable.
+Le moteur conserve actuellement seulement le nombre d'opérations non classées, pas leurs identifiants. L'objectif futur **X opérations sans classement officiel → Voir et classer les opérations concernées** exige donc un audit préalable. L'Audit 27-R en dénombre actuellement 19.
 
 Une présentation plus claire ne doit pas imposer prématurément deux listes déroulantes. La direction privilégiée est de conserver si possible un sélecteur unique et rapide tout en affichant le chemin complet après sélection, par exemple **Le logement · Autre (précisez)** ou **Les dépenses de la vie courante · Alimentation**.
 
@@ -639,3 +639,232 @@ L'audit reste **EN COURS**. Les éléments marqués **À ÉTUDIER** ou **AUDIT T
 - Vérifier les redirections et les retours après chaque action.
 - Tester chaque évolution avec les rôles existants.
 - Maintenir lint, TypeScript, build et `git diff --check` au vert lors des futures implémentations.
+
+## 36. Audit 23 — Partage du dossier
+
+### Présentation et navigation
+
+- **NAV-19 — Priorité haute :** renommer visuellement **Accès au dossier** en **Partage du dossier**. Les routes et identifiants techniques peuvent conserver leur nom actuel.
+- **NAV-20 — Priorité haute :** la rubrique est accessible au propriétaire et au gestionnaire, jamais au rôle lecture seule.
+- **ACC-04 — Priorité haute, architecture cible possible :** organiser la page en deux ensembles, **Personnes ayant accès** et **Inviter un collaborateur**.
+- **ACC-05 — Priorité haute :** présenter les personnes et leurs droits avant les actions de partage.
+
+### Droits à expliquer — ACC-01
+
+- **Propriétaire :** peut consulter et modifier l'ensemble du dossier et gérer les collaborateurs.
+- **Gestionnaire :** peut consulter et modifier le dossier et inviter des collaborateurs en lecture seule.
+- **Lecture seule :** peut consulter le dossier sans le modifier et n'accède pas à la gestion du partage.
+
+Les textes UI ne doivent pas exposer inutilement les détails techniques des RPC.
+
+### Personnes et invitations
+
+- **ACC-02 — Priorité moyenne :** afficher le propriétaire parmi les personnes ayant accès, avec prénom, nom, e-mail et badge **Propriétaire**.
+- **ACC-06 — Priorité haute :** le propriétaire peut inviter un gestionnaire ou un lecteur. Le gestionnaire peut inviter uniquement en lecture seule ; son formulaire ne doit pas afficher un faux choix entre plusieurs rôles.
+- **ACC-07 — Priorité haute :** séparer les invitations en attente de l'historique des invitations acceptées, révoquées ou expirées. L'historique pourra être repliable, mais ne doit pas être supprimé automatiquement.
+
+Le vocabulaire retenu est **Annuler l'invitation** pour l'action et **Révoquée** dans l'historique. L'invitation reste directe, sans modal de confirmation. Pour le propriétaire, le rôle proposé par défaut reste **Lecture seule**.
+
+## 37. Audit 24 — État technique du partage
+
+Les sources de vérité sont :
+
+- propriétaire : `protected_persons.owner_id` ;
+- collaborateurs : `protected_person_access` ;
+- invitations : `protected_person_invitations`.
+
+### Droits actuels validés
+
+| Rôle | Page | Invitations | Rôles et retraits |
+|---|---|---|---|
+| Propriétaire | Visible | Invite `manager` ou `read_only`, renvoie et révoque les invitations éligibles | Modifie `manager ↔ read_only` et retire un collaborateur |
+| Gestionnaire | Visible | Invite `read_only`, renvoie ou révoque uniquement ses propres invitations `read_only` | Ne modifie pas les rôles et ne retire pas les collaborateurs |
+| Lecture seule | Aucun menu ; accès direct refusé/404 | Aucun | Aucun |
+
+- **ACC-08 — Priorité très haute :** empêcher en amont une invitation destinée au propriétaire du dossier ou à un collaborateur déjà présent. L'acceptation protège déjà certains conflits, mais trop tard dans le parcours.
+- **PERF-02 — Priorité moyenne :** éviter le chargement N+1 des identités sur la page de partage.
+- **ACC-09 — À étudier :** permettre éventuellement à un collaborateur de quitter lui-même un dossier. Aucune implémentation n'est décidée.
+
+`invited_by` peut être `NULL` afin de préserver l'historique après suppression d'un utilisateur ; l'interface peut alors afficher **Utilisateur supprimé**. L'historique des invitations n'est actuellement pas paginé.
+
+## 38. Audit 25 — Modes de compte, autorisation et invitation
+
+### Deux modes de compte exclusifs
+
+**AUTH-01 — Critique.** Le mode du compte est distinct du rôle détenu dans un dossier.
+
+| Mode de compte | Finalité | Création de dossier | Rôles possibles dans un dossier partagé |
+|---|---|---|---|
+| Compte principal | Gérer ses propres dossiers | Oui | Éventuellement propriétaire, gestionnaire ou lecture seule selon les règles futures |
+| Compte collaborateur | Accéder uniquement aux dossiers reçus par invitation | Jamais | Gestionnaire ou lecture seule |
+
+- **AUTH-02 — Critique :** l'interdiction de créer un dossier pour un compte collaborateur devra être appliquée dans l'UI, la route, l'action/service et SQL/RLS.
+- **AUTH-03 — Priorité très haute :** une invitation destinée à une personne sans compte doit créer ou activer un compte collaborateur, sans droit implicite de créer ses propres dossiers.
+- **AUTH-04 — Priorité très haute :** les deux modes ne sont pas mélangés avec la même adresse. Une personne souhaitant également gérer ses propres dossiers doit utiliser une autre adresse et un compte principal séparé. Aucune promotion automatique vers un compte principal n'est prévue.
+- **AUTH-05 — Priorité très haute :** fiabiliser le parcours invitation → inscription → confirmation e-mail → retour à l'invitation → acceptation → accès. Une invitation valide peut sponsoriser l'autorisation applicative lors de l'acceptation finale ; l'UX doit rendre ce parcours explicite.
+
+### État technique actuel
+
+`application_user_authorizations.status = active` reste une autorisation globale indivisible. Il n'existe encore ni `account_mode`, ni `can_create_dossiers`, ni capacité équivalente. Le nom et la forme de la future capacité ne sont pas arrêtés.
+
+Migration conceptuelle des comptes existants :
+
+- propriétaire d'au moins un dossier : capacité principale évidente ;
+- utilisateur issu uniquement d'une invitation et sans dossier possédé : candidat collaborateur ;
+- cas ambigu : revue explicite ;
+- administrateur de plateforme : aucun droit métier implicite du seul fait de son rôle administratif.
+
+**BUG-01 — Priorité haute.** Après un changement Lecture seule → Gestionnaire, le texte peut être correct tandis que le `<select>` reste visuellement sur Lecture seule. La base est correcte ; le défaut vient du composant conservé avec `defaultValue` au lieu d'une valeur contrôlée.
+
+## 39. Audit 26 — Catégories dans les dossiers partagés
+
+### Découverte structurelle
+
+Le modèle actuel repose sur les règles suivantes :
+
+- une catégorie système est globale ;
+- une catégorie personnelle appartient à un utilisateur, pas à un dossier ;
+- `transactions.category_id` référence la catégorie ;
+- le mapping officiel est porté par la catégorie ;
+- le compte de gestion résout dynamiquement le classement depuis les catégories visibles par l'utilisateur courant.
+
+Dans un dossier partagé, un gestionnaire peut donc saisir une opération avec sa catégorie personnelle. Le dossier peut ensuite dépendre du compte du gestionnaire, de son mapping et de ses modifications futures, alors que le propriétaire peut ne pas voir cette catégorie. Le calcul du compte de gestion peut également différer selon l'utilisateur connecté.
+
+L'Audit 27-R confirme qu'aucune dépendance de ce type n'existe dans les données conservées, mais l'architecture doit empêcher qu'elle apparaisse.
+
+### Décisions de classification
+
+- **MET-21 — Critique :** la classification d'une opération doit être indépendante de l'utilisateur connecté.
+- **MET-22 — Critique :** la classification historique appartient à l'opération dans son dossier.
+- **CAT-07 — Priorité très haute :** une catégorie personnelle devient une bibliothèque ou un raccourci de saisie. Elle peut proposer un poste officiel et une précision, mais n'est plus l'autorité historique après l'enregistrement.
+- **CAT-08 — Priorité très haute :** remapper une catégorie personnelle ne doit jamais reclasser silencieusement les anciennes opérations. Une reclassification historique en masse devra être explicite, contrôlée et volontaire.
+- **CAT-09 — Priorité très haute :** pour **Autre (précisez)**, la précision appartient à l'opération. Exemple : poste officiel **Autre (précisez)**, précision **Coiffeur**.
+- **CAT-10 — Priorité très haute :** un gestionnaire doit pouvoir classer les opérations sans rendre le dossier dépendant de sa bibliothèque personnelle.
+- **CAT-11 — Priorité haute :** un compte collaborateur-only ne doit pas administrer une bibliothèque personnelle globale comme un compte principal.
+- **CAT-12 — Priorité très haute :** le retrait ou la suppression d'un gestionnaire ne doit jamais masquer, déclasser, modifier ou rendre illisible une opération qu'il a saisie.
+- **MET-23 — Critique :** tous les utilisateurs autorisés à calculer un compte de gestion doivent obtenir exactement le même classement.
+
+### Orientation cible, choix technique encore ouvert
+
+L'opération devra porter au minimum :
+
+- l'identité stable du poste officiel ;
+- une précision éventuelle ;
+- un état de classification, avec les états envisagés `complete`, `needs_precision` et `unclassified`.
+
+`category_id` pourra éventuellement rester une provenance, la bibliothèque utilisée ou un raccourci, mais ne devra plus être l'autorité historique. Le choix entre FK vers une référence officielle stable, snapshot de `official_code` ou combinaison adaptée reste à trancher.
+
+## 40. Audit 27-R — État réel après nettoyage
+
+L'Audit 27-R remplace l'ancien Audit 27 comme photographie de référence avant migration. Il a été établi après NET-01, NET-02 et COR-01.
+
+### Volumétrie actuelle de référence
+
+| Indicateur | Valeur |
+|---|---:|
+| Dossiers | 2 |
+| Comptes financiers | 12 |
+| Opérations | 582 |
+| Recettes | 272 |
+| Dépenses | 268 |
+| Mouvements de virement | 42 |
+| Transferts métier | 21 |
+| Recettes/dépenses avec catégorie | 521 |
+| Recettes/dépenses sans catégorie | 19 |
+| Utilisations de catégories système | 459 |
+| Utilisations de catégories personnelles | 62 |
+| Catégories personnelles distinctes utilisées | 12 |
+| Utilisations de catégories personnelles appartenant à un tiers | 0 |
+
+### Périmètre de migration
+
+| Dossier | Total | Auto certaine | Autre avec proposition | Autre sans proposition | Sans classement | Catégorie tiers | Virements |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Françoise LUCET-DALLONGEVILLE | 569 | 441 | 54 | 13 | 19 | 0 | 42 |
+| ERIC PELLE | 13 | 12 | 0 | 1 | 0 | 0 | 0 |
+| **Total** | **582** | **453** | **54** | **14** | **19** | **0** | **42** |
+
+Les 54 propositions proviennent de sept catégories personnelles utilisées dans le dossier Françoise :
+
+| Catégorie | Opérations |
+|---|---:|
+| Coiffeur | 18 |
+| Pédicure | 9 |
+| Allocation combattant | 5 |
+| Frais bancaires | 5 |
+| Obsèques | 1 |
+| Notaire | 2 |
+| Charges copropriété | 14 |
+| **Total** | **54** |
+
+Le nom actuel est seulement une proposition de précision à valider. Une future interface pourra étudier une validation groupée par catégorie afin d'éviter 54 corrections individuelles.
+
+Les 14 opérations directement classées dans un poste système **Autre (précisez)** sont réparties ainsi :
+
+- Françoise : `DEP-2-07` × 8, `DEP-1-08` × 3, `RES-4-04` × 1, `DEP-3-04` × 1 ;
+- ERIC : `DEP-2-07` × 1.
+
+Le libellé de transaction pourra être présenté comme aide, mais ne devra pas être copié automatiquement comme précision.
+
+Les 19 opérations sans classement sont toutes dans Françoise :
+
+- 2023 : 10 recettes et 1 dépense ;
+- 2024 : 7 recettes ;
+- 2025 : 1 recette.
+
+Elles nécessitent une décision métier humaine et ne doivent pas être classées automatiquement à partir de leur libellé.
+
+### Catégories et intégrité
+
+Après nettoyage :
+
+- 20 catégories personnelles ;
+- 12 utilisées et 8 inutilisées ;
+- 3 archivées, aucune encore utilisée ;
+- 1 sans mapping officiel, mais inutilisée ;
+- aucune utilisée dans un dossier tiers.
+
+**Pharmacie du village** est désormais inutilisée après suppression du dossier de test Jérôme, mais reste volontairement conservée.
+
+Les contrôles structurels ne trouvent aucune transaction vers une catégorie inexistante, catégorie personnelle utilisée sans mapping, référence officielle invalide, catégorie de tiers utilisée, catégorie système avec propriétaire, catégorie personnelle sans propriétaire, catégorie système sans code officiel ou catégorie personnelle portant directement des métadonnées officielles. Rien ne bloque donc la migration déterministe des 453 opérations classées hors **Autre**.
+
+### Comptes de gestion restants
+
+Il reste quatre rapports `draft` dans Françoise, pour 2023, 2024, 2025 et 2026. ERIC n'en possède aucun. Aucun document ni snapshot de compte de gestion ne subsiste.
+
+Ces quatre rapports utilisent encore le calcul dynamique fondé sur les catégories et devront être recalculés ou au minimum revérifiés après migration. L'ancien rapport approuvé et le PDF du dossier Jérôme étaient des données de test supprimées : ils ne constituent plus une contrainte de production.
+
+## 41. Historique de maintenance — NET-01, NET-02 et COR-01
+
+### NET-01 et NET-02
+
+NET-01 a inventorié quatre dossiers. La décision humaine a été de conserver absolument Françoise LUCET-DALLONGEVILLE et ERIC PELLE, puis de supprimer les dossiers de test Jérôme LUCET-DALLONGEVILLE et Jean DUPONT ainsi que le compte de test Jerome OUTLOOK.
+
+NET-02 a réalisé cette purge contrôlée. Françoise et ERIC sont restés intacts ; les deux dossiers de test et le compte de test ont été supprimés ; les catégories personnelles ont été conservées. Il reste 244 objets Storage, tous cohérents avec leurs lignes SQL, sans objet orphelin.
+
+### COR-01 — Résolu
+
+La date de début de relevé `0206-02-11` dans Françoise a été explicitement confirmée puis corrigée en `2026-02-11`. Le relevé, le compte, le dossier et l'objet Storage sont restés identiques ; aucune autre donnée métier n'a été modifiée et aucune autre année manifestement anormale n'a été détectée.
+
+## 42. Points ouverts avant migration — MIG-01 à MIG-10
+
+- **MIG-01 :** choisir la représentation stable sur l'opération : FK officielle, snapshot de `official_code` ou combinaison adaptée.
+- **MIG-02 :** définir le rôle futur de `transactions.category_id` comme provenance ou bibliothèque éventuelle.
+- **MIG-03 :** définir la validation des 54 propositions, probablement groupable par catégorie personnelle, sans arrêter encore la solution.
+- **MIG-04 :** concevoir la correction des 14 opérations **Autre** sans précision.
+- **MIG-05 :** concevoir la correction des 19 opérations non classées.
+- **MIG-06 :** définir le traitement des 42 mouvements de virement correspondant à 21 transferts.
+- **MIG-07 :** définir la stratégie de recalcul ou revérification des quatre rapports `draft`.
+- **MIG-08 :** appliquer les droits de correction : propriétaire et gestionnaire oui ; lecture seule non ; administrateur de plateforme sans accès métier non.
+- **MIG-09 :** prévoir les filtres de diagnostic `complete`, `needs_precision` et `unclassified`.
+- **MIG-10 :** garantir qu'une suppression d'utilisateur ou de catégorie personnelle n'affecte jamais le classement historique.
+
+Ces éléments sont explicitement ouverts et ne constituent pas encore un choix de schéma ou une autorisation d'implémentation.
+
+## 43. Roadmap et sujets ultérieurs
+
+- **COM-01 — Priorité moyenne :** permettre éventuellement à un administrateur d'annoncer volontairement une version significative aux utilisateurs actifs, avec aperçu, suivi et prévention des doublons. Aucun e-mail automatique à chaque patch.
+- **COM-02 — Priorité moyenne :** distinguer les e-mails nécessaires au service des annonces produit facultatives et prévoir un opt-in/opt-out adapté pour ces dernières.
+- **IMPORT-01 — Futur :** étudier l'import intelligent de relevés PDF texte, scans avec OCR et formats CSV/OFX/QIF, avec proposition du compte, extraction de période et d'opérations, détection des doublons, proposition de catégories, validation humaine et rapprochement des soldes.
+
+La saisie en série, le rapprochement bancaire et la classification stable sont des prérequis utiles à IMPORT-01. Aucun de ces sujets n'est implémenté ou autorisé par le présent document.
