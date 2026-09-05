@@ -115,7 +115,7 @@ La date du jour proposée par défaut peut être trompeuse et doit être revue. 
 
 La fiche actuelle est globalement pertinente : solde calculé, informations, dernières opérations, relevés, modification et cycle de vie. L'état vide **Aucune opération** doit mieux orienter vers **Saisir des opérations**. Les actions exceptionnelles ou destructives, telles que clôturer ou supprimer le compte, pourraient devenir visuellement secondaires.
 
-**NAV-13 — Priorité haute.** Depuis le détail d'un compte, le retour vers la liste des comptes doit être évident.
+**NAV-13 — Priorité haute, décision affinée.** Depuis le détail d'un compte, le retour vers la liste des comptes doit rester évident. Le fil d'Ariane actuel fournit déjà ce chemin ; il n'est donc pas nécessairement utile d'ajouter un bouton redondant **Retour aux comptes**. La future navigation doit préserver cette lisibilité.
 
 **NAV-14 — Priorité haute.** Le comportement des cartes et des liens doit être audité lorsqu'un compte est déjà sélectionné, afin d'éviter les changements de contexte implicites.
 
@@ -123,7 +123,12 @@ La fiche actuelle est globalement pertinente : solde calculé, informations, der
 
 ## 13. Opérations — deux usages distincts
 
-Le formulaire complet **Ajouter une opération** est conservé pour une opération ponctuelle. Un second workflow sera créé à terme pour la saisie successive d'un relevé.
+Deux vues légitimes doivent être conservées sans les fusionner :
+
+- le journal global du dossier, destiné à la recherche et au contrôle transversal de tous les comptes, avec patrimoine actuel, soldes et filtres ;
+- le journal d'un compte, destiné au travail contextualisé, avec solde courant, solde après chaque mouvement, colonne **Pièces** et actions propres au compte.
+
+Le formulaire complet **Ajouter une opération** est conservé pour une opération ponctuelle. Un second workflow sera créé à terme pour la saisie successive des opérations d'un relevé.
 
 Les actions envisagées sont : **Ajouter une opération**, **Saisir un relevé** et **Effectuer un virement**. La saisie d'un relevé ne doit pas renvoyer à la liste après chaque ligne.
 
@@ -135,13 +140,19 @@ La conversion vers ou depuis un virement est plus complexe, car elle peut impliq
 
 Cette évolution est de priorité très haute. Elle doit permettre de saisir 20, 30 ou 40 opérations sans répéter liste → ajout → formulaire → enregistrement → liste.
 
-Le compte est fixé par le contexte. Chaque ligne contient : type Recette/Dépense/Virement, date, libellé, catégorie, montant et accès immédiat au justificatif. Après validation, la ligne est enregistrée, une confirmation apparaît, la suivante est préparée et l'utilisateur reste sur le même écran.
+**UX-46 — Priorité très haute, validée.** Le journal d'un compte est la porte d'entrée naturelle principale : le compte y est déjà connu et son solde disponible. Le même workflow pourra être lancé depuis le journal global, avec choix du compte au démarrage.
 
-La date précédente peut être conservée ; la catégorie reste disponible ; le commentaire peut être secondaire ou masqué par défaut. L'écran affiche les opérations de la session et permet une utilisation efficace au clavier.
+**UX-47 — Priorité très haute.** Il faut distinguer **Relevés**, qui sert à consulter et archiver les relevés du compte, de la future saisie en série, qui utilise un relevé comme support pour saisir plusieurs opérations et, à terme, contrôler le solde. Le libellé définitif — **Saisir un relevé**, **Saisir les opérations d'un relevé**, **Saisie en série** ou autre — reste à étudier.
+
+**UX-48 — Priorité très haute, validée.** Un seul moteur/formulaire métier doit être conservé et contextualisé : compte à choisir depuis le journal global, compte prérempli depuis un compte.
+
+Chaque ligne contient : type Recette/Dépense/Virement, date, libellé, catégorie, montant et accès immédiat au justificatif. Après validation, la ligne est enregistrée, une confirmation apparaît, la suivante est préparée et l'utilisateur reste sur le même écran.
+
+Direction UX à confirmer lors de la conception finale : conserver le compte et probablement la date, vider libellé, montant et commentaire, puis plutôt réinitialiser type et catégorie afin d'éviter les erreurs de répétition. La conservation de la date n'est pas une règle métier. L'écran affiche les opérations de la session et permet une utilisation efficace au clavier.
 
 ## 15. Justificatifs pendant la saisie — UX-25 / UX-35 / MET-11
 
-Le justificatif doit pouvoir être ajouté immédiatement après chaque opération afin d'éviter de revenir ensuite sur des dizaines de lignes : opération enregistrée, référence attribuée, **Ajouter le justificatif**, puis **Saisir la suivante**.
+Le justificatif doit pouvoir être ajouté immédiatement après chaque opération afin d'éviter de revenir ensuite sur des dizaines de lignes : opération enregistrée, référence attribuée, **Ajouter le justificatif**, puis **Saisir la suivante**. Pour une opération ponctuelle, l'ajout facultatif doit également pouvoir être proposé dans le même parcours.
 
 Le justificatif n'est pas nécessairement obligatoire pour continuer. Le mécanisme existant d'attribution automatique de référence est conservé.
 
@@ -149,9 +160,15 @@ Le justificatif n'est pas nécessairement obligatoire pour continuer. Le mécani
 
 **UX-35 — Priorité haute.** La référence automatique doit être présentée comme une information, non comme un champ de saisie modifiable.
 
+Le système actuel d'upload ne couvre en pratique que les dépenses possédant déjà une référence. **DOC-04** nécessite donc une évolution technique et métier spécifique avant d'annoncer le même parcours pour les recettes.
+
 ## 16. Recette / Dépense / Virement
 
 Les trois concepts métier existants sont conservés. Recette et Dépense peuvent utiliser une saisie rapide avec date, libellé, catégorie et montant. Virement conserve son traitement spécifique, avec compte source et compte destination ; un virement interne ne doit pas devenir une simple dépense ou recette si cela compromet la cohérence métier.
+
+**UX-49 — Priorité très haute.** La future saisie en série doit permettre de traiter une ligne correspondant à un vrai virement.
+
+**MET-20 — Priorité très haute.** Elle doit réutiliser le moteur existant : `create_internal_transfer` crée atomiquement une ligne `transfers`, un mouvement `transfer_out` et un mouvement `transfer_in`, liés par `transfer_id`. Les virements n'ont ni catégorie ni référence de pièce, ne sont pas modifiables actuellement et sont supprimés comme une unité. Il ne faut jamais les remplacer par une dépense et une recette indépendantes.
 
 Il reste à étudier le virement vers un compte absent de PatriGest. L'anomalie **Libellé facultatif \*** du formulaire Virement doit être vérifiée pour déterminer si le champ est réellement obligatoire ou facultatif.
 
@@ -244,9 +261,11 @@ Les pages `/dossiers` et `/dossiers/gestion` étant très proches, une seule ent
 
 Dans l'état vide, un utilisateur autorisé voit **Créer mon premier dossier**. Celui qui ne peut pas créer et attend un accès reçoit une explication indiquant qu'aucun dossier n'est accessible. Les liens **Gérer les dossiers** ailleurs dans l'interface devront être audités et probablement devenir **Voir tous les dossiers**.
 
-## 25. Paramètres et navigation basse
+## 25. Paramètres et navigation basse — NAV-17
 
-Sont conservés pour l'instant : Catégories, Mon compte, Historique des versions et Déconnexion. La place exacte de Catégories reste à auditer ; cette zone ne doit pas être modifiée avant l'audit de son fonctionnement réel.
+Sont conservés : Catégories, Mon compte, Historique des versions et Déconnexion.
+
+**NAV-17 — Priorité haute.** Tant que **Catégories** est la seule entrée concernée, la section visuelle **Paramètres** ajoute un niveau sans bénéfice réel. Catégories doit être affiché directement dans la navigation. Une section Paramètres pourra être réintroduite si de vrais réglages transversaux apparaissent. Mon compte, Informations du dossier, Accès au dossier et l'administration PatriGest ne doivent pas y être déplacés.
 
 ## 26. Priorités déjà identifiées
 
@@ -414,7 +433,7 @@ Le besoin dépend du contexte : facture ou ticket pour une dépense, justificati
 - **DOC-01 — Très haute :** le justificatif reste facultatif selon le contexte.
 - **DOC-02 — Très haute, à étudier :** permettre à un même document d'être relié à plusieurs opérations.
 - **DOC-03 — Très haute :** ne pas dupliquer physiquement un PDF unique couvrant plusieurs paiements récurrents.
-- **DOC-04 — Haute :** les justificatifs peuvent concerner les dépenses comme les recettes.
+- **DOC-04 — Haute, évolution requise :** les justificatifs peuvent concerner les dépenses comme les recettes, mais le système actuel d'upload exige une dépense existante possédant une référence.
 - **DOC-05 — Haute :** prévoir les factures et échéanciers couvrant plusieurs débits.
 - **DOC-06 — Très haute :** créer à terme une vue **Documents** au niveau du dossier.
 - **DOC-07 — Très haute :** prévoir recherche et filtres par référence, nom, date, type, compte, catégorie et autres critères utiles.
@@ -500,7 +519,7 @@ La vérification du modèle officiel annexé à l'arrêté du 4 juillet 2024 con
 - **CAT-03 — Très haute :** ne plus traiter **Autre (précisez)** comme un fourre-tout opaque.
 - **CAT-04 — Très haute, à concevoir :** gérer réellement la précision associée à un poste **Autre (précisez)**.
 - **CAT-05 — Très haute :** depuis le compte de gestion, rendre accessibles les opérations sans classement officiel.
-- **CAT-06 — Haute :** lever l'ambiguïté du formulaire, où **Rubrique officielle** désigne actuellement un poste terminal.
+- **CAT-06 — Très haute :** lever l'ambiguïté du formulaire, où **Rubrique officielle** désigne actuellement un poste terminal.
 
 PatriGest possède 13 postes **Autre (précisez)** mais aucun champ de précision. Pour une catégorie **Abonnements** rattachée à Dépenses → Les dépenses de la vie courante → Autre (précisez), le nom de la catégorie peut éventuellement être proposé comme précision, sans être repris automatiquement dans tous les cas. Une catégorie **Divers** ne constituerait pas nécessairement une précision utile.
 
@@ -508,7 +527,13 @@ La possibilité d'afficher un total officiel puis sa composition — par exemple
 
 Le moteur conserve actuellement seulement le nombre d'opérations non classées, pas leurs identifiants. L'objectif futur **11 opérations sans classement officiel → Voir et classer les 11 opérations** exige donc un audit préalable.
 
-Une présentation plus claire du formulaire pourrait distinguer Rubrique, Poste et, uniquement pour **Autre**, Précision. Cette présentation n'est pas une spécification d'implémentation.
+Une présentation plus claire ne doit pas imposer prématurément deux listes déroulantes. La direction privilégiée est de conserver si possible un sélecteur unique et rapide tout en affichant le chemin complet après sélection, par exemple **Le logement · Autre (précisez)** ou **Les dépenses de la vie courante · Alimentation**.
+
+**UX-40 — Priorité haute.** Simplifier le classement officiel sans masquer sa hiérarchie ni transformer inutilement la création d'une catégorie en formulaire multi-étapes.
+
+**UX-41 — Priorité moyenne.** Le référentiel officiel complet peut devenir une section repliable, indiquant clairement ses 56 postes et sa source réglementaire, car son affichage intégral occupe beaucoup de hauteur.
+
+**CAT-04** reste prioritaire : des catégories existantes telles que Charges copropriété, Coiffeur, Frais bancaires, Notaire, Obsèques ou Pédicure montrent que **Autre (précisez)** n'est pas un cas marginal. Le modèle exact de la précision reste soumis à un audit métier et technique.
 
 ### Reclassement historique — MET-19
 
@@ -516,7 +541,65 @@ Une présentation plus claire du formulaire pourrait distinguer Rubrique, Poste 
 
 Il n'existe actuellement ni date d'effet, ni historique de mapping, ni mapping propre à l'opération, ni analyse préalable du nombre d'opérations touchées. Les snapshots et PDF déjà générés restent protégés. Toutefois, le PDF final étant recalculé lors de la finalisation, une modification entre le PDF PROJET et la finalisation peut produire une différence. Aucune solution technique définitive n'est retenue à ce stade.
 
-## 31. Principes transversaux consolidés
+### État de l'audit 20
+
+**Audit 20 — Catégories / ergonomie : AUDIT FONCTIONNEL INITIAL TERMINÉ.** La page est globalement saine : catégories personnelles en premier, référentiel officiel en lecture seule ensuite, archivage plutôt que suppression, rattachement officiel visible et actions Modifier/Archiver acceptables. Aucune refonte complète n'est annoncée. **MET-19** et le modèle exact de **Autre (précisez)** restent à étudier.
+
+## 31. Audit 21 — Journaux et saisie des opérations
+
+**Audit 21 — Journal et saisie des opérations : AUDIT FONCTIONNEL INITIAL TERMINÉ.**
+
+Le journal global et le journal d'un compte répondent à deux usages distincts et ne doivent pas être fusionnés. La future navigation **Gestion financière — Comptes | Opérations | Relevés** doit clarifier leurs responsabilités selon le principe : menu gauche = domaine, menu horizontal = sous-rubrique, boutons = actions, fil d'Ariane = localisation.
+
+**UX-42 — Priorité moyenne, à étudier.** Dans le journal global, les deux mouvements d'un virement peuvent donner une impression de doublon. Étudier une représentation conceptuelle d'un seul événement sans modifier le modèle ; dans le journal d'un compte, le mouvement propre au compte reste visible.
+
+**UX-43 — Priorité haute, validée.** La recherche doit pouvoir retrouver ultérieurement une opération par libellé ou référence de pièce, par exemple `2026-0147`, sans l'élargir automatiquement à tous les champs.
+
+**UX-44 — Priorité moyenne, validée.** La présence d'une pièce doit être indiquée discrètement dans les deux journaux. Le journal d'un compte affiche déjà le trombone et le journal global dispose techniquement de la même information.
+
+**UX-45 — Priorité très haute.** Ajouter une stratégie adaptée de pagination ou de chargement des journaux, sans fixer arbitrairement une taille de page ni choisir encore entre offset, curseur ou chargement progressif.
+
+Le principe de parcours est validé : une opération ponctuelle revient au journal après succès ; une saisie en série reste dans le workflow et prépare immédiatement la ligne suivante.
+
+## 32. Audit 22 — Opérations, pagination et justificatifs
+
+**Audit 22 — Opérations / saisie en série / pagination / justificatifs : AUDIT TECHNIQUE READ-ONLY TERMINÉ.** Aucune implémentation n'est annoncée.
+
+### Chargement et pagination — PERF-01
+
+**PERF-01 — Critique avant montée en charge.** Les filtres sont appliqués côté serveur et le tri est déterministe : `transaction_date DESC`, puis `created_at DESC`, puis `id DESC`. En revanche, aucun `range` ni `limit` n'est utilisé par les journaux.
+
+Le journal global conserve en mémoire toutes les lignes retournées tandis que `getFinancialAccounts` recharge toutes les transactions pour les soldes et le patrimoine. Le journal d'un compte charge les opérations filtrées, recharge toutes les opérations sans filtre pour les soldes progressifs et les recharge encore via `getFinancialAccount` pour le solde courant. Les mêmes opérations peuvent donc être chargées jusqu'à trois fois.
+
+Les risques sont le coût croissant, une limite PostgREST potentiellement atteinte, des résultats incomplets à très fort volume et une pagination naïve produisant des soldes erronés.
+
+Le solde après une ligne est le vrai solde du compte, y compris lorsque des filtres masquent des mouvements. Chaque page devra disposer d'un solde d'ouverture tenant compte de tous les mouvements antérieurs selon l'ordre métier `transaction_date`, `created_at`, `id`. La stratégie définitive de pagination et le calcul serveur de ce solde restent à étudier.
+
+### Références de pièces
+
+Pour une dépense, la référence est générée en SQL `BEFORE INSERT`. L'année vient de `transaction_date`, la séquence est propre au dossier et à l'année — non à l'utilisateur ou au compte — et le format est `AAAA-NNNN`. La génération est concurrent-safe, l'unicité garantie et la référence retournée après création.
+
+Les recettes et virements n'ont actuellement aucune référence. Lors d'une suppression, le compteur n'est pas décrémenté, le numéro n'est jamais réutilisé et les trous sont possibles et intentionnels. Aucune renumérotation automatique ne doit être envisagée. **MET-11** reste à traiter pour les références de pièces de recettes.
+
+### Justificatifs — TECH-01 / DOC-10
+
+Le modèle actuel utilise le bucket privé `transaction-proofs` et la table `transaction_documents`. Il autorise actuellement zéro ou un document par opération, en PDF, JPEG ou PNG, avec une taille maximale de 10 Mo. L'opération doit déjà exister et être une dépense possédant une référence.
+
+**TECH-01 — Priorité très haute.** Si l'upload Storage réussit puis l'écriture SQL échoue, aucune compensation n'est réalisée : un objet peut rester orphelin ou un remplacement peut laisser des métadonnées SQL anciennes. Une future orchestration doit présenter séparément **opération créée** et **justificatif échoué**. Il n'existe pas de transaction atomique commune à SQL et Storage.
+
+**DOC-10** reste hors du chantier immédiat : le futur modèle Documents envisage plusieurs documents par opération et un document lié à plusieurs opérations, ce qui nécessitera une évolution ultérieure du modèle.
+
+### Soldes, droits et navigation
+
+La règle unique à préserver est : solde initial + recettes + virements entrants − dépenses − virements sortants. Le solde n'est pas stocké par opération ; `calculateRunningBalances()` le recalcule selon l'ordre date, création, identifiant. La future saisie doit réutiliser cette définition.
+
+Owner et manager peuvent gérer recettes, dépenses, virements et justificatifs ; read_only reste limité à la consultation. Les validations Zod, l'appartenance au dossier, les RLS, les triggers SQL, les exercices clôturés, les dates des comptes, les comptes de valorisation, le Storage privé, les contrôles de fichiers et les URL signées doivent être préservés.
+
+**NAV-18 — Priorité haute.** Une recette ou dépense lancée depuis un compte revient à son journal grâce au compte prérempli. Un virement revient actuellement toujours au journal global. La future évolution doit préserver le contexte du compte après création d'un virement.
+
+Restent explicitement à étudier : stratégie définitive de pagination, calcul serveur du solde d'ouverture, références des pièces de recettes, relation documentaire plusieurs-à-plusieurs, libellé définitif de la saisie en série, comportement final des champs conservés et représentation globale des virements.
+
+## 33. Principes transversaux consolidés
 
 - Nécessaire maintenant ≠ nécessaire avant le compte de gestion.
 - L'application calcule ou propose lorsque la règle est sûre ; l'utilisateur décide lorsque le cas exige un choix métier.
@@ -527,14 +610,14 @@ Il n'existe actuellement ni date d'effet, ni historique de mapping, ni mapping p
 - Préserver les snapshots et les documents historiques.
 - Améliorer et réutiliser l'existant avant de créer de nouveaux mécanismes.
 
-## 32. Audit restant
+## 34. Audit restant
 
 À ce stade, l'audit ne doit pas être considéré comme terminé. Restent à examiner :
 
 1. Relevés bancaires — **AUDIT FONCTIONNEL INITIAL TERMINÉ** ; un audit technique du modèle des relevés est nécessaire avant implémentation
 2. Justificatifs et documents — **AUDIT FONCTIONNEL INITIAL TERMINÉ** ; audits métier et technique nécessaires avant évolution du modèle documentaire
 3. Compte de gestion — **AUDIT FONCTIONNEL ET TECHNIQUE INITIAL TERMINÉ** ; décisions CG marquées à étudier à approfondir avant implémentation
-4. Catégories — **AUDIT TECHNIQUE INITIAL TERMINÉ** ; décisions métier requises sur la précision et le reclassement historique
+4. Catégories — **AUDIT FONCTIONNEL ET TECHNIQUE INITIAL TERMINÉ** ; décisions métier requises sur la précision et le reclassement historique
 5. Navigation et retours sur les autres écrans
 6. États vides, erreurs et confirmations
 7. Comportement selon les rôles propriétaire, gestionnaire et lecture seule
@@ -545,7 +628,7 @@ Il n'existe actuellement ni date d'effet, ni historique de mapping, ni mapping p
 
 L'audit reste **EN COURS**. Les éléments marqués **À ÉTUDIER** ou **AUDIT TECHNIQUE/MÉTIER REQUIS** ne constituent pas des spécifications validées. Aucun démarrage de l'implémentation n'est décidé dans ce document.
 
-## 33. Règles pour la suite
+## 35. Règles pour la suite
 
 - Ne pas implémenter une décision simplement parce qu'elle figure dans ce document.
 - Terminer l'audit avant de lancer la refonte globale.
