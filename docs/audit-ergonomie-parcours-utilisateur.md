@@ -744,15 +744,17 @@ L'Audit 27-R confirme qu'aucune dépendance de ce type n'existe dans les donnée
 - **CAT-12 — Priorité très haute :** le retrait ou la suppression d'un gestionnaire ne doit jamais masquer, déclasser, modifier ou rendre illisible une opération qu'il a saisie.
 - **MET-23 — Critique :** tous les utilisateurs autorisés à calculer un compte de gestion doivent obtenir exactement le même classement.
 
-### Orientation cible, choix technique encore ouvert
+### Architecture cible validée — MIG-01 et MIG-02
 
-L'opération devra porter au minimum :
+L'opération portera directement la classification historique au moyen de :
 
-- l'identité stable du poste officiel ;
-- une précision éventuelle ;
-- un état de classification, avec les états envisagés `complete`, `needs_precision` et `unclassified`.
+- `transactions.official_category_id uuid NULL`, FK vers une catégorie système officielle stable ;
+- `transactions.classification_precision text NULL`, précision propre à l'opération ;
+- `categories.requires_precision boolean NOT NULL DEFAULT false`, afin d'identifier les postes qui exigent une précision sans dépendre du libellé français.
 
-`category_id` pourra éventuellement rester une provenance, la bibliothèque utilisée ou un raccourci, mais ne devra plus être l'autorité historique. Le choix entre FK vers une référence officielle stable, snapshot de `official_code` ou combinaison adaptée reste à trancher.
+L'état de classification n'est pas stocké : il est dérivé entre `complete`, `needs_precision` et `unclassified`. `official_code` n'est pas dupliqué sur chaque transaction.
+
+`transactions.category_id` est conservé uniquement pendant la transition et sera supprimé du modèle cible. Aucune provenance relationnelle ou textuelle ne le remplacera. Une catégorie personnelle devient uniquement un preset de saisie : elle peut proposer un poste officiel et une précision, mais son rôle s'arrête lorsque l'opération est enregistrée.
 
 ## 40. Audit 27-R — État réel après nettoyage
 
@@ -797,7 +799,7 @@ Les 54 propositions proviennent de sept catégories personnelles utilisées dans
 | Charges copropriété | 14 |
 | **Total** | **54** |
 
-Le nom actuel est seulement une proposition de précision à valider. Une future interface pourra étudier une validation groupée par catégorie afin d'éviter 54 corrections individuelles.
+Ces sept propositions ont ensuite été explicitement validées par le propriétaire dans MIG-03. Les réserves sémantiques initiales ont été levées humainement ; aucune précision n'a été validée automatiquement à partir du seul nom d'une catégorie personnelle. Le détail final est consigné dans la section **Décisions de reprise MIG-03 et MIG-04**.
 
 Les 14 opérations directement classées dans un poste système **Autre (précisez)** sont réparties ainsi :
 
@@ -805,6 +807,8 @@ Les 14 opérations directement classées dans un poste système **Autre (précis
 - ERIC : `DEP-2-07` × 1.
 
 Le libellé de transaction pourra être présenté comme aide, mais ne devra pas être copié automatiquement comme précision.
+
+Les 13 opérations du dossier Françoise ont ensuite été entièrement résolues et validées métier dans MIG-04B. L'opération du dossier ERIC reste séparée : sa nature a été indiquée, mais sa validation métier reste en attente faute d'accès propriétaire ou gestionnaire démontré pour la personne ayant fourni cette information.
 
 Les 19 opérations sans classement sont toutes dans Françoise :
 
@@ -846,12 +850,70 @@ NET-02 a réalisé cette purge contrôlée. Françoise et ERIC sont restés inta
 
 La date de début de relevé `0206-02-11` dans Françoise a été explicitement confirmée puis corrigée en `2026-02-11`. Le relevé, le compte, le dossier et l'objet Storage sont restés identiques ; aucune autre donnée métier n'a été modifiée et aucune autre année manifestement anormale n'a été détectée.
 
-## 42. Points ouverts avant migration — MIG-01 à MIG-10
+## 42. Décisions de reprise MIG-03 et MIG-04
 
-- **MIG-01 :** choisir la représentation stable sur l'opération : FK officielle, snapshot de `official_code` ou combinaison adaptée.
-- **MIG-02 :** définir le rôle futur de `transactions.category_id` comme provenance ou bibliothèque éventuelle.
-- **MIG-03 :** définir la validation des 54 propositions, probablement groupable par catégorie personnelle, sans arrêter encore la solution.
-- **MIG-04 :** concevoir la correction des 14 opérations **Autre** sans précision.
+### MIG-03 — 54 opérations validées humainement
+
+| Groupe | Nombre | Classification officielle finale | `classification_precision` |
+|---|---:|---|---|
+| Coiffeur | 18 | `DEP-1-08` — Autre (précisez) | `Coiffeur` |
+| Pédicure | 9 | `DEP-1-08` — Autre (précisez) | `Pédicure` |
+| Allocation combattant | 5 recettes | `RES-2-05` — Autre (précisez) | `Allocation combattant` |
+| Frais bancaires | 5 | `DEP-1-08` — Autre (précisez) | `Frais bancaires` |
+| Obsèques | 1 | `DEP-10-03` — Autre (précisez) | `Obsèques` |
+| Notaire | 2 | `DEP-10-03` — Autre (précisez) | `Notaire` |
+| Charges copropriété | 14 | `DEP-2-07` — Autre (précisez) | `Charges copropriété` |
+| **Total** | **54** | — | — |
+
+Les décisions métier ont été fournies explicitement et toutes les réserves initiales ont été levées. Le futur backfill devra cibler un manifeste exact d'UUID, vérifier le dossier, la catégorie source, le mapping, le type et la cardinalité, puis effectuer un rollback complet au moindre écart.
+
+### MIG-04 — 13 opérations Françoise validées métier
+
+| Ligne(s) | Nombre | Classification officielle finale | `classification_precision` |
+|---|---:|---|---|
+| F01, F03, F05, F06, F07, F12 | 6 | `DEP-2-07` — Autre (précisez) | `Bricolage / entretien du logement` |
+| F10, F11 | 2 | `DEP-1-08` — Autre (précisez) | `Fournitures de bureau` |
+| F02 | 1 | `DEP-1-08` — Autre (précisez) | `Laverie` |
+| F04 | 1 | `DEP-2-07` — Autre (précisez) | `Diagnostic immobilier` |
+| F08 | 1 | `RES-4-03` — Remboursements (CPAM, mutuelle, etc.) | `NULL` |
+| F09 | 1 | `DEP-3-03` — Taxe foncière | `NULL` |
+| F13 | 1 | `DEP-1-04` — Frais médicaux | `NULL` |
+| **Total** | **13** | — | — |
+
+Les opérations EDB F05, F07 et F12 relèvent du **bricolage / entretien du logement**. L'hypothèse antérieure **Eau** a été explicitement rejetée par le propriétaire. Les achats ACTION F01, F03 et F06 ont également été confirmés comme du bricolage ou de l'entretien du logement.
+
+Pour F08, la nature **remboursement de charges de copropriété** est confirmée. PatriGest utilise `RES-4-03` comme poste générique de remboursements : la migration du référentiel y rattachait déjà l'ancienne catégorie générique **Remboursements**, et aucune restriction aux seuls remboursements médicaux n'a été trouvée. `RES-4-04` et une précision artificielle ne sont donc pas nécessaires.
+
+F09 utilise le poste terminal dédié `DEP-3-03 — Taxe foncière` et F13 le poste terminal `DEP-1-04 — Frais médicaux`. Leur précision reste `NULL`, conformément à la règle selon laquelle un poste terminal dédié ne reçoit pas de précision artificielle.
+
+**MIG-04 — dossier Françoise : VALIDÉ ET TERMINÉ.**
+
+### MIG-04 — E01 du dossier ERIC
+
+E01, datée du 11 février 2026 et libellée **TV magasin Boulanger**, correspond selon l'information fournie à l'achat d'une télévision considérée comme mobilier. La cible proposée est `DEP-6-03 — Meuble`, dont le libellé officiel cite explicitement la télévision, avec `classification_precision = NULL`.
+
+La personne ayant fourni cette information n'est ni propriétaire du dossier ERIC ni titulaire d'un accès gestionnaire à ce dossier. Un rôle Administrateur PatriGest ne conférant aucun droit métier implicite, le statut reste : **PROPOSITION CONFIRMÉE SUR LA NATURE MAIS VALIDATION MÉTIER EN ATTENTE**.
+
+**MIG-04 GLOBAL : EN ATTENTE DE VALIDATION E01.**
+
+### Principes et garde du futur backfill
+
+- La classification historique appartient à l'opération.
+- Une catégorie personnelle est uniquement un outil de saisie ou preset.
+- `classification_precision` appartient à l'opération.
+- Un poste officiel **Autre (précisez)** nécessite une précision ; un poste terminal dédié n'en reçoit pas artificiellement.
+- La classification historique ne dépend jamais de l'utilisateur connecté.
+- Propriétaire et gestionnaire peuvent corriger selon leurs droits métier ; lecture seule ne peut pas corriger.
+- Administrateur PatriGest n'obtient aucun accès métier automatique aux dossiers.
+
+La future migration devra figer, sans exposer les UUID dans ce document : UUID exact de chaque transaction, dossier et compte attendus, type, ancien `category_id`, ancien et nouveau `official_code`, précision validée ou `NULL`, cardinalité exacte, assertions avant `UPDATE`, verrouillage et rollback complet au moindre écart.
+
+## 43. Points ouverts avant migration — MIG-01 à MIG-10
+
+- **MIG-01 — VALIDÉ :** FK officielle stable portée par l'opération, précision propre à l'opération et état dérivé.
+- **MIG-02 — VALIDÉ :** `transactions.category_id` est transitoire puis supprimé ; aucune provenance ne le remplace.
+- **MIG-03 — VALIDÉ MÉTIER :** les 54 propositions sont confirmées en sept groupes.
+- **MIG-04 — PARTIELLEMENT TERMINÉ :** les 13 opérations Françoise sont validées ; E01/ERIC attend une validation métier légitime.
 - **MIG-05 :** concevoir la correction des 19 opérations non classées.
 - **MIG-06 :** définir le traitement des 42 mouvements de virement correspondant à 21 transferts.
 - **MIG-07 :** définir la stratégie de recalcul ou revérification des quatre rapports `draft`.
@@ -859,9 +921,9 @@ La date de début de relevé `0206-02-11` dans Françoise a été explicitement 
 - **MIG-09 :** prévoir les filtres de diagnostic `complete`, `needs_precision` et `unclassified`.
 - **MIG-10 :** garantir qu'une suppression d'utilisateur ou de catégorie personnelle n'affecte jamais le classement historique.
 
-Ces éléments sont explicitement ouverts et ne constituent pas encore un choix de schéma ou une autorisation d'implémentation.
+Les éléments encore ouverts ne constituent pas une autorisation d'implémentation. Les décisions validées ci-dessus fixent la cible conceptuelle mais n'autorisent encore aucune migration.
 
-## 43. Roadmap et sujets ultérieurs
+## 44. Roadmap et sujets ultérieurs
 
 - **COM-01 — Priorité moyenne :** permettre éventuellement à un administrateur d'annoncer volontairement une version significative aux utilisateurs actifs, avec aperçu, suivi et prévention des doublons. Aucun e-mail automatique à chaque patch.
 - **COM-02 — Priorité moyenne :** distinguer les e-mails nécessaires au service des annonces produit facultatives et prévoir un opt-in/opt-out adapté pour ces dernières.
