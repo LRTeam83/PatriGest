@@ -756,6 +756,8 @@ L'état de classification n'est pas stocké : il est dérivé entre `complete`, 
 
 `transactions.category_id` est conservé uniquement pendant la transition et sera supprimé du modèle cible. Aucune provenance relationnelle ou textuelle ne le remplacera. Une catégorie personnelle devient uniquement un preset de saisie : elle peut proposer un poste officiel et une précision, mais son rôle s'arrête lorsque l'opération est enregistrée.
 
+MIG-05B complète cette architecture sans remettre en cause MIG-01 ou MIG-02 : le sens bancaire porté par `transaction_type` doit être distingué d'une future nature comptable applicable aux opérations classiques. Les valeurs conceptuelles retenues sont `ordinary` et `capital_movement` ; le nom exact du futur champ SQL n'est pas encore figé. Aucun `classification_status` supplémentaire ne doit être stocké, car l'état reste dérivable.
+
 ## 40. Audit 27-R — État réel après nettoyage
 
 L'Audit 27-R remplace l'ancien Audit 27 comme photographie de référence avant migration. Il a été établi après NET-01, NET-02 et COR-01.
@@ -816,7 +818,7 @@ Les 19 opérations sans classement sont toutes dans Françoise :
 - 2024 : 7 recettes ;
 - 2025 : 1 recette.
 
-Elles nécessitent une décision métier humaine et ne doivent pas être classées automatiquement à partir de leur libellé.
+À la date de ce snapshot pré-migration, elles nécessitaient une décision métier humaine et ne devaient pas être classées automatiquement à partir de leur libellé. MIG-05 a depuis résolu leur traitement métier, sans qu'aucune donnée ait encore été migrée ; cette décision actuelle est consignée plus bas.
 
 ### Catégories et intégrité
 
@@ -908,14 +910,129 @@ La personne ayant fourni cette information n'est ni propriétaire du dossier ERI
 
 La future migration devra figer, sans exposer les UUID dans ce document : UUID exact de chaque transaction, dossier et compte attendus, type, ancien `category_id`, ancien et nouveau `official_code`, précision validée ou `NULL`, cardinalité exacte, assertions avant `UPDATE`, verrouillage et rollback complet au moindre écart.
 
-## 43. Points ouverts avant migration — MIG-01 à MIG-10
+## 43. MIG-05 — Validation finale des 19 opérations anciennement non classées
+
+MIG-05, MIG-05B et MIG-05C ont résolu métier les 19 opérations sur 19. Aucune décision métier ne reste ouverte pour le dossier Françoise dans ce périmètre. Leur `category_id` reste néanmoins techniquement `NULL` tant que la future migration n'a pas été exécutée.
+
+### U01 à U18 — Mouvements de capital historiques
+
+U01 à U18 correspondent à des mouvements de capital liés à des comptes ou placements antérieurs ou extérieurs au périmètre suivi. La décision produit est de ne pas reconstruire les anciens comptes, de ne pas convertir ces écritures en transferts structurés PatriGest et de ne pas les supprimer.
+
+Elles devront :
+
+- rester dans le journal avec leurs dates, montants, libellés et sens bancaires actuels ;
+- continuer à affecter les soldes bancaires ;
+- être exclues des ressources et des dépenses du compte de gestion ;
+- être exclues de l'état **À classer** ;
+- conserver `official_category_id = NULL`, `classification_precision = NULL` et `transfer_id = NULL` ;
+- recevoir la future nature comptable `capital_movement`.
+
+U02 et U03 restent deux écritures bancaires distinctes. Elles ne doivent être ni fusionnées ni supprimées au motif que leurs montants s'annulent.
+
+### Sens bancaire et nature comptable
+
+Le `transaction_type` actuel conserve le sens ou le mécanisme bancaire : `income`, `expense`, `transfer_in` ou `transfer_out`. La future nature comptable des opérations classiques distingue :
+
+- `ordinary` : ressource ou dépense ordinaire, classée ou restant à classer ;
+- `capital_movement` : mouvement bancaire affectant le solde, mais ne constituant ni une ressource ni une dépense ordinaire.
+
+Les états futurs restent dérivés :
+
+- `ordinary` avec `official_category_id = NULL` : **À classer** ;
+- `ordinary` sur un poste **Autre (précisez)** exigeant une précision, avec `classification_precision = NULL` : **À préciser** ;
+- `ordinary` avec classification complète : **Classée** ;
+- `capital_movement` : **Mouvement de capital — résolue** ;
+- paire de transfert cohérente : **Virement structuré**.
+
+Une entrée créditrice n'est donc pas nécessairement une ressource, et une sortie débitrice n'est pas nécessairement une dépense. MIG-05 complète MIG-01/MIG-02 avec cette séparation. `transactions.category_id` reste transitoire puis disparaît ; aucun `source_category_id`, `source_category_label` ou `classification_status` stocké n'est introduit.
+
+### U19 — Remboursement conservé
+
+U19, datée du 20 février 2025, libellée **VIR LONGRAIS**, d'un montant de 32 €, est un remboursement erroné provenant d'un tiers. Les fonds ont réellement été reçus et conservés, sans restitution ni neutralisation.
+
+La décision finale est :
+
+- `transaction_type = income` ;
+- nature comptable `ordinary` ;
+- `official_category_id` résolu par `RES-4-03 — Remboursements (CPAM, mutuelle, etc.)` ;
+- `classification_precision = NULL` ;
+- `transfer_id = NULL`.
+
+La parenthèse **CPAM, mutuelle, etc.** est illustrative et non restrictive dans le référentiel PatriGest. L'ancienne catégorie générique **Remboursements** était déjà remappée vers `RES-4-03`, et la décision F08 confirme l'usage de ce poste pour un remboursement non médical. U19 est une ressource ordinaire du futur compte de gestion, pas un mouvement de capital.
+
+Après migration, aucune des 19 opérations MIG-05 ne devra apparaître dans **À classer** et U19 ne devra pas apparaître dans **À préciser**.
+
+### Impact sur les comptes de gestion et garde future
+
+U01 à U18 continueront d'affecter les soldes, sans augmenter les ressources ou dépenses ni bloquer la complétude de classification. U19 augmentera le solde et sera agrégée dans `RES-4-03`. Les quatre comptes de gestion Françoise encore en brouillon ne sont pas modifiés à ce stade ; ils devront être recalculés, comparés et contrôlés après la migration technique.
+
+Le futur backfill de U01 à U18 devra utiliser un manifeste exact de 18 UUID, contrôler la cardinalité et vérifier pour chaque ligne le dossier, le compte, la date, le montant, le libellé, le type, `category_id IS NULL` et `transfer_id IS NULL`. Il devra verrouiller les lignes, appliquer uniquement `capital_movement` et effectuer un rollback complet au moindre écart. U19 recevra les mêmes gardes individuelles ; l'UUID de `RES-4-03` sera résolu localement par `official_code` et jamais codé en dur entre environnements.
+
+## 44. MIG-06 — Comptes de placement, compte-titres et valorisations
+
+MIG-06 confirme que PatriGest ne possède actuellement aucun type spécifique **Compte-titres**. Les comptes à valorisation existants sont `life_insurance` et `other_investment`. `other_investment` pourrait techniquement représenter un compte-titres, mais son libellé générique **Autre placement** n'est pas la cible métier souhaitée.
+
+La cible validée est l'ajout ultérieur de :
+
+- type technique `securities_account` ;
+- libellé UI **Compte-titres** ;
+- rattachement à la famille des comptes à valorisation.
+
+Le compte-titres réutilisera `public.account_valuations`. Aucune nouvelle table de valorisations et aucun portefeuille détaillé ne sont nécessaires. Sa valeur patrimoniale sera une valeur globale datée ; PatriGest ne gérera pas à ce stade les titres individuels, actions, obligations, ETF, quantités, cours, arbitrages ou plus-values ligne par ligne.
+
+Pour `life_insurance`, `other_investment` et le futur `securities_account`, le libellé **Valeur initiale** est préférable à **Solde initial**. Cette amélioration UX n'est pas encore implémentée.
+
+### Règles relatives aux opérations et valorisations
+
+- compte courant suivi vers compte-titres suivi, ou inversement : transfert structuré PatriGest ;
+- compte-titres externe ou non suivi vers compte bancaire suivi : `capital_movement` créditeur ;
+- compte bancaire suivi vers placement externe ou non suivi : `capital_movement` débiteur ;
+- dividende ou intérêt réellement encaissé sur un compte suivi : recette `ordinary` avec catégorie officielle appropriée ;
+- dividende ou intérêt restant dans le portefeuille sans flux bancaire distinct : valorisation globale uniquement ;
+- variation de marché sans flux bancaire : valorisation uniquement ;
+- frais prélevés dans le portefeuille et déjà reflétés dans sa valeur : valorisation uniquement au niveau fonctionnel actuel ;
+- frais débités d'un compte bancaire suivi : dépense ordinaire ;
+- achats et ventes internes de titres : aucun détail obligatoire dans le modèle actuel, leur effet étant reflété par la valorisation globale.
+
+Le compte-titres apparaîtra parmi les comptes et placements. Ses valeurs de début et de fin de période proviendront de la dernière valorisation applicable, et non d'une somme d'opérations boursières. La logique actuelle rapprochant certains transferts entrants vers les placements de `DEP-8-01 — Placements mobiliers (actions, SICAV, livret, autre)` devra être revue avec `capital_movement` pendant la conception technique.
+
+Lors de la fermeture d'un compte-titres suivi, PatriGest devra conserver son historique, ses valorisations, ses transferts et sa date de clôture. Un transfert structuré sera utilisé si le capital rejoint un compte suivi ; `capital_movement` sera utilisé si la destination est extérieure au périmètre. Une valorisation finale à zéro peut être pertinente après liquidation, mais ne doit pas devenir automatique avant validation du comportement exact. Tout double comptage entre valorisation et capital transféré devra être empêché.
+
+### Validation Tarneaud Senior
+
+La validation humaine post-MIG-06 confirme que **Tarneaud Senior est bien une assurance-vie**. Son type `life_insurance` doit être conservé ; aucune requalification ni migration particulière n'est nécessaire pour ce compte.
+
+### MUTAVIE et besoins VAL-01 / VAL-02
+
+Le compte MUTAVIE actif du dossier Françoise contient deux valorisations erronées :
+
+- 30 juin 2020 : 0,00 €, commentaire **A supprimer** ;
+- 30 septembre 2020 : 0,00 €, commentaire **A supprimer**.
+
+Elles sont encadrées par les valeurs réelles du 31 décembre 2019, 5 190,35 €, et du 31 décembre 2020, 5 244,09 €. La validation humaine confirme qu'il s'agit d'erreurs de saisie mises à zéro parce que PatriGest ne permet pas actuellement de supprimer une valorisation. Ces deux lignes sont encore physiquement présentes et ne constituent ni une liquidation ni une valeur réelle à zéro.
+
+- **VAL-01 — À concevoir et implémenter :** suppression contrôlée d'une valorisation erronée par un propriétaire ou gestionnaire autorisé, avec confirmation explicite, recalcul naturel à partir des autres valeurs, respect des permissions et tests de non-régression. La protection éventuelle d'une valorisation déjà utilisée dans un snapshot historique doit être étudiée avant implémentation.
+- **VAL-02 — À étudier techniquement :** renforcer la cohérence de la date d'une valorisation avec la date d'ouverture, la date de la valeur initiale et la date de clôture du compte.
+
+Aucun compte actuel n'utilise `other_investment`, aucun compte-titres explicite n'a été identifié et aucune requalification automatique n'est nécessaire. Les deux valorisations MUTAVIE restent présentes jusqu'à l'implémentation d'une suppression contrôlée.
+
+### Préparation technique du compte-titres
+
+L'ajout futur de `securities_account` concernera au minimum le `CHECK` de `financial_accounts`, les types TypeScript, Zod, les labels, `isValuationAccount()`, les formulaires, le compte de gestion, le PDF, le dashboard, les transferts et les tests. Il pourra faire l'objet d'une migration séparée de la migration de classification si cette séparation réduit le risque.
+
+## 45. Points ouverts avant migration — MIG-01 à MIG-10
 
 - **MIG-01 — VALIDÉ :** FK officielle stable portée par l'opération, précision propre à l'opération et état dérivé.
 - **MIG-02 — VALIDÉ :** `transactions.category_id` est transitoire puis supprimé ; aucune provenance ne le remplace.
 - **MIG-03 — VALIDÉ MÉTIER :** les 54 propositions sont confirmées en sept groupes.
 - **MIG-04 — PARTIELLEMENT TERMINÉ :** les 13 opérations Françoise sont validées ; E01/ERIC attend une validation métier légitime.
-- **MIG-05 :** concevoir la correction des 19 opérations non classées.
-- **MIG-06 :** définir le traitement des 42 mouvements de virement correspondant à 21 transferts.
+- **MIG-05 — VALIDÉ MÉTIER :** les 19 opérations sont résolues, dont 18 mouvements de capital historiques et U19 classée dans `RES-4-03`.
+- **MIG-05B — VALIDÉ CONCEPTUELLEMENT :** nature comptable `ordinary` / `capital_movement`, distincte du sens bancaire.
+- **MIG-05C — TERMINÉ :** U19 est une ressource ordinaire, sans précision.
+- **MIG-06 — ÉTUDE TERMINÉE :** `securities_account` est la cible validée, avec réutilisation de `account_valuations` et sans portefeuille détaillé.
+- **VAL-01 — À CONCEVOIR/IMPLÉMENTER :** suppression contrôlée d'une valorisation erronée.
+- **VAL-02 — À ÉTUDIER :** cohérence chronologique des valorisations.
+- **TRANSFERTS — À COMPLÉTER :** définir le traitement final des 42 mouvements correspondant à 21 transferts dans le futur moteur.
 - **MIG-07 :** définir la stratégie de recalcul ou revérification des quatre rapports `draft`.
 - **MIG-08 :** appliquer les droits de correction : propriétaire et gestionnaire oui ; lecture seule non ; administrateur de plateforme sans accès métier non.
 - **MIG-09 :** prévoir les filtres de diagnostic `complete`, `needs_precision` et `unclassified`.
@@ -923,7 +1040,7 @@ La future migration devra figer, sans exposer les UUID dans ce document : UUID e
 
 Les éléments encore ouverts ne constituent pas une autorisation d'implémentation. Les décisions validées ci-dessus fixent la cible conceptuelle mais n'autorisent encore aucune migration.
 
-## 44. Roadmap et sujets ultérieurs
+## 46. Roadmap et sujets ultérieurs
 
 - **COM-01 — Priorité moyenne :** permettre éventuellement à un administrateur d'annoncer volontairement une version significative aux utilisateurs actifs, avec aperçu, suivi et prévention des doublons. Aucun e-mail automatique à chaque patch.
 - **COM-02 — Priorité moyenne :** distinguer les e-mails nécessaires au service des annonces produit facultatives et prévoir un opt-in/opt-out adapté pour ces dernières.
