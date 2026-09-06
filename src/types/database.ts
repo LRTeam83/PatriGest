@@ -15,6 +15,7 @@ export type FinancialAccountType = "checking" | "livret_a" | "ldds" | "csl" | "l
 type FinancialAccountStatus = "active" | "closed";
 export type CategoryUsage = "income" | "expense" | "both";
 export type TransactionType = "income" | "expense" | "transfer_in" | "transfer_out";
+export type AccountingNature = "ordinary" | "capital_movement";
 export type DossierAccessRole = "owner" | "manager" | "read_only";
 export type SharedAccessRole = Exclude<DossierAccessRole, "owner">;
 type AccountRequestStatus = "pending" | "approved" | "rejected";
@@ -162,7 +163,7 @@ export type Database = {
         Relationships: [];
       };
       categories: {
-        Row: { id: string; owner_id: string | null; name: string; usage: CategoryUsage; is_system: boolean; active: boolean; official_code: string | null; official_section: string | null; official_group: string | null; official_order: number | null; official_category_id: string | null; created_at: string; updated_at: string };
+        Row: { id: string; owner_id: string | null; name: string; usage: CategoryUsage; is_system: boolean; active: boolean; official_code: string | null; official_section: string | null; official_group: string | null; official_order: number | null; official_category_id: string | null; requires_precision: boolean; created_at: string; updated_at: string };
         Insert: { id?: string; owner_id?: string | null; name: string; usage: CategoryUsage; is_system?: boolean; active?: boolean; official_code?: string | null; official_section?: string | null; official_group?: string | null; official_order?: number | null; official_category_id?: string | null; created_at?: string; updated_at?: string };
         Update: { name?: string; usage?: CategoryUsage; active?: boolean; official_category_id?: string | null; updated_at?: string };
         Relationships: [{ foreignKeyName: "categories_official_category_id_fkey"; columns: ["official_category_id"]; isOneToOne: false; referencedRelation: "categories"; referencedColumns: ["id"] }];
@@ -174,10 +175,10 @@ export type Database = {
         Relationships: [];
       };
       transactions: {
-        Row: { id: string; financial_account_id: string; transaction_date: string; transaction_type: TransactionType; label: string; amount: number; category_id: string | null; transfer_id: string | null; proof_reference: string | null; comment: string | null; created_at: string; updated_at: string };
-        Insert: { id?: string; financial_account_id: string; transaction_date: string; transaction_type: TransactionType; label: string; amount: number; category_id?: string | null; transfer_id?: string | null; proof_reference?: string | null; comment?: string | null; created_at?: string; updated_at?: string };
+        Row: { id: string; financial_account_id: string; transaction_date: string; transaction_type: TransactionType; label: string; amount: number; category_id: string | null; transfer_id: string | null; proof_reference: string | null; comment: string | null; accounting_nature: AccountingNature | null; official_category_id: string | null; classification_precision: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; financial_account_id: string; transaction_date: string; transaction_type: TransactionType; label: string; amount: number; category_id?: string | null; transfer_id?: string | null; proof_reference?: string | null; comment?: string | null; accounting_nature?: AccountingNature | null; official_category_id?: string | null; classification_precision?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["transactions"]["Insert"]>;
-        Relationships: [];
+        Relationships: [{ foreignKeyName: "transactions_official_category_id_fkey"; columns: ["official_category_id"]; isOneToOne: false; referencedRelation: "categories"; referencedColumns: ["id"] }];
       };
       proof_reference_counters: {
         Row: { protected_person_id: string; reference_year: number; last_number: number; updated_at: string };
