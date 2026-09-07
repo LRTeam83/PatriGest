@@ -23,6 +23,7 @@ type ResolveTransactionClassificationInput = {
   transactionType: OrdinaryTransactionType;
   categoryId: string | null;
   classificationPrecision?: string | null;
+  requirePrecision?: boolean;
 };
 
 type ResolveTransactionClassificationUpdateInput = Omit<
@@ -36,6 +37,13 @@ type ResolveTransactionClassificationUpdateInput = Omit<
 const INCOMPATIBLE_CATEGORY_ERROR = "Catégorie incompatible.";
 const INVALID_PRECISION_ERROR = "La précision de classification ne peut pas dépasser 160 caractères.";
 const CAPITAL_MOVEMENT_UPDATE_ERROR = "Un mouvement de capital ne peut pas être modifié comme une opération ordinaire.";
+
+export class ClassificationPrecisionRequiredError extends Error {
+  constructor() {
+    super("Précisez la nature de cette opération.");
+    this.name = "ClassificationPrecisionRequiredError";
+  }
+}
 
 export function normalizeClassificationPrecision(value: string | null | undefined) {
   const normalized = value?.trim() || null;
@@ -73,8 +81,12 @@ function classificationForOfficialCategory(
   categoryId: string | null,
   officialCategory: Category,
   classificationPrecision: string | null | undefined,
+  requirePrecision = false,
 ): StableTransactionClassification {
   const normalizedPrecision = normalizeClassificationPrecision(classificationPrecision);
+  if (requirePrecision && officialCategory.requires_precision && !normalizedPrecision) {
+    throw new ClassificationPrecisionRequiredError();
+  }
   return {
     categoryId,
     officialCategoryId: officialCategory.id,
@@ -89,6 +101,7 @@ export async function resolveTransactionClassification({
   transactionType,
   categoryId,
   classificationPrecision,
+  requirePrecision,
 }: ResolveTransactionClassificationInput): Promise<StableTransactionClassification> {
   if (!categoryId) {
     normalizeClassificationPrecision(classificationPrecision);
@@ -112,7 +125,7 @@ export async function resolveTransactionClassification({
     ) {
       throw new Error(INCOMPATIBLE_CATEGORY_ERROR);
     }
-    return classificationForOfficialCategory(categoryId, selectedCategory, classificationPrecision);
+    return classificationForOfficialCategory(categoryId, selectedCategory, classificationPrecision, requirePrecision);
   }
 
   if (selectedCategory.owner_id !== userId || !selectedCategory.official_category_id) {
@@ -128,7 +141,7 @@ export async function resolveTransactionClassification({
     throw new Error(INCOMPATIBLE_CATEGORY_ERROR);
   }
 
-  return classificationForOfficialCategory(categoryId, officialCategory, classificationPrecision);
+  return classificationForOfficialCategory(categoryId, officialCategory, classificationPrecision, requirePrecision);
 }
 
 export async function resolveTransactionClassificationForUpdate({
@@ -138,6 +151,7 @@ export async function resolveTransactionClassificationForUpdate({
   existing,
   categoryId,
   classificationPrecision,
+  requirePrecision,
 }: ResolveTransactionClassificationUpdateInput): Promise<StableTransactionClassification> {
   if (existing.accounting_nature === "capital_movement") {
     throw new Error(CAPITAL_MOVEMENT_UPDATE_ERROR);
@@ -151,6 +165,7 @@ export async function resolveTransactionClassificationForUpdate({
       transactionType,
       categoryId,
       classificationPrecision,
+      requirePrecision,
     });
   }
 

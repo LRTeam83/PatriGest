@@ -8,11 +8,12 @@ import { createTransfer, deleteTransfer } from "@/domains/transfers/services/tra
 import { isClosedPeriodError } from "./errors";
 import { transactionSchema } from "./schemas/transaction-schema";
 import { createTransaction, deleteTransaction, updateTransaction } from "./services/transaction-service";
+import { ClassificationPrecisionRequiredError } from "./services/transaction-classification";
 import type { TransactionActionState } from "./state";
 import { getSafeTransactionReturnTo } from "./return-to";
 
 const idsValid = (...ids: string[]) => ids.every((id) => z.uuid().safeParse(id).success);
-const txValues = (formData: FormData) => ({ financialAccountId: formData.get("financialAccountId"), transactionDate: formData.get("transactionDate"), transactionType: formData.get("transactionType"), label: formData.get("label"), amount: formData.get("amount"), categoryId: formData.get("categoryId"), proofReference: formData.get("proofReference"), comment: formData.get("comment") });
+const txValues = (formData: FormData) => ({ financialAccountId: formData.get("financialAccountId"), transactionDate: formData.get("transactionDate"), transactionType: formData.get("transactionType"), label: formData.get("label"), amount: formData.get("amount"), categoryId: formData.get("categoryId"), classificationPrecision: formData.get("classificationPrecision"), proofReference: formData.get("proofReference"), comment: formData.get("comment") });
 const transferValues = (formData: FormData) => ({ sourceAccountId: formData.get("sourceAccountId"), destinationAccountId: formData.get("destinationAccountId"), transferDate: formData.get("transferDate"), amount: formData.get("amount"), label: formData.get("label"), comment: formData.get("comment") });
 function refresh(personId: string) { revalidatePath(`/dossiers/${personId}`); revalidatePath(`/dossiers/${personId}/operations`); revalidatePath(`/dossiers/${personId}/comptes`); }
 
@@ -21,7 +22,7 @@ export async function createTransactionAction(personId: string, _state: Transact
   const parsed = transactionSchema.safeParse(txValues(formData));
   if (!parsed.success) return { status: "error", message: "Vérifiez les informations saisies.", fieldErrors: parsed.error.flatten().fieldErrors };
   try { await createTransaction(personId, parsed.data); }
-  catch (error) { return { status: "error", message: isClosedPeriodError(error) ? "Impossible d’ajouter une opération dans un exercice clôturé." : error instanceof Error ? error.message : "Impossible d’enregistrer l’opération." }; }
+  catch (error) { if (error instanceof ClassificationPrecisionRequiredError) return { status: "error", message: "Vérifiez les informations saisies.", fieldErrors: { classificationPrecision: [error.message] } }; return { status: "error", message: isClosedPeriodError(error) ? "Impossible d’ajouter une opération dans un exercice clôturé." : error instanceof Error ? error.message : "Impossible d’enregistrer l’opération." }; }
   refresh(personId);
   return { status: "success", message: "L’opération a été créée." };
 }
@@ -31,7 +32,7 @@ export async function updateTransactionAction(personId: string, transactionId: s
   const parsed = transactionSchema.safeParse(txValues(formData));
   if (!parsed.success) return { status: "error", message: "Vérifiez les informations saisies.", fieldErrors: parsed.error.flatten().fieldErrors };
   try { await updateTransaction(transactionId, personId, parsed.data); }
-  catch (error) { return { status: "error", message: isClosedPeriodError(error) ? "Cette opération appartient à un exercice clôturé et ne peut plus être modifiée." : error instanceof Error ? error.message : "Impossible de modifier l’opération." }; }
+  catch (error) { if (error instanceof ClassificationPrecisionRequiredError) return { status: "error", message: "Vérifiez les informations saisies.", fieldErrors: { classificationPrecision: [error.message] } }; return { status: "error", message: isClosedPeriodError(error) ? "Cette opération appartient à un exercice clôturé et ne peut plus être modifiée." : error instanceof Error ? error.message : "Impossible de modifier l’opération." }; }
   refresh(personId);
   redirect(getSafeTransactionReturnTo(personId, returnTo));
 }

@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  ClassificationPrecisionRequiredError,
   normalizeClassificationPrecision,
   resolveTransactionClassification,
   resolveTransactionClassificationForUpdate,
 } from "./transaction-classification.ts";
+import { getEffectiveOfficialCategory, getPrecisionAfterCategoryChange } from "../components/transaction-classification-form.ts";
 
 const userId = "11111111-1111-4111-8111-111111111111";
 
@@ -74,8 +76,15 @@ test("résout une catégorie système sans précision", async () => {
 
 test("conserve la précision d'une catégorie système qui l'exige", async () => {
   const official = category({ requires_precision: true });
-  const result = await resolveTransactionClassification({ supabase: client([official]), userId, transactionType: "expense", categoryId: official.id, classificationPrecision: "  Coiffeur  " });
+  const result = await resolveTransactionClassification({ supabase: client([official]), userId, transactionType: "expense", categoryId: official.id, classificationPrecision: "  Coiffeur  ", requirePrecision: true });
   assert.equal(result.classificationPrecision, "Coiffeur");
+});
+
+test("exige une précision pour une nouvelle catégorie système en mode manuel", async () => {
+  const official = category({ requires_precision: true });
+  await assert.rejects(resolveTransactionClassification({ supabase: client([official]), userId, transactionType: "expense", categoryId: official.id, classificationPrecision: null, requirePrecision: true }), ClassificationPrecisionRequiredError);
+  const lowLevel = await resolveTransactionClassification({ supabase: client([official]), userId, transactionType: "expense", categoryId: official.id, classificationPrecision: null });
+  assert.equal(lowLevel.classificationPrecision, null);
 });
 
 test("résout un preset personnel sans copier automatiquement son nom", async () => {
@@ -85,6 +94,14 @@ test("résout un preset personnel sans copier automatiquement son nom", async ()
   assert.equal(result.categoryId, preset.id);
   assert.equal(result.officialCategoryId, official.id);
   assert.equal(result.classificationPrecision, null);
+});
+
+test("exige une précision pour un nouveau preset en mode manuel", async () => {
+  const official = category({ requires_precision: true });
+  const preset = category({ id: "99999999-9999-4999-8999-999999999999", owner_id: userId, name: "Coiffeur", is_system: false, official_code: null, official_category_id: official.id });
+  await assert.rejects(resolveTransactionClassification({ supabase: client([preset, official]), userId, transactionType: "expense", categoryId: preset.id, classificationPrecision: "", requirePrecision: true }), ClassificationPrecisionRequiredError);
+  const result = await resolveTransactionClassification({ supabase: client([preset, official]), userId, transactionType: "expense", categoryId: preset.id, classificationPrecision: "Coiffeur à domicile", requirePrecision: true });
+  assert.equal(result.classificationPrecision, "Coiffeur à domicile");
 });
 
 test("refuse un preset appartenant à un autre utilisateur", async () => {
@@ -164,6 +181,33 @@ test("préserve une classification stable sans catégorie quand null est retrans
   });
 });
 
+test("autorise une ancienne ligne À préciser lors d'une modification indépendante", async () => {
+  const official = category({ active: false, requires_precision: true });
+  const result = await resolveTransactionClassificationForUpdate({
+    supabase: client([official]),
+    userId,
+    transactionType: "expense",
+    existing: { accounting_nature: "ordinary", category_id: official.id, official_category_id: official.id, classification_precision: null },
+    categoryId: official.id,
+    classificationPrecision: null,
+    requirePrecision: true,
+  });
+  assert.equal(result.classificationPrecision, null);
+});
+
+test("refuse une nouvelle catégorie À préciser sans précision lors d'un UPDATE manuel", async () => {
+  const official = category({ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", requires_precision: true });
+  await assert.rejects(resolveTransactionClassificationForUpdate({
+    supabase: client([official]),
+    userId,
+    transactionType: "expense",
+    existing: { accounting_nature: "ordinary", category_id: null, official_category_id: null, classification_precision: null },
+    categoryId: official.id,
+    classificationPrecision: null,
+    requirePrecision: true,
+  }), ClassificationPrecisionRequiredError);
+});
+
 test("résout une nouvelle catégorie B lors d'un UPDATE A vers B", async () => {
   const officialB = category({ id: "77777777-7777-4777-8777-777777777777", requires_precision: true });
   const presetB = category({ id: "88888888-8888-4888-8888-888888888888", owner_id: userId, name: "Coiffeur", is_system: false, official_code: null, official_category_id: officialB.id });
@@ -175,6 +219,7 @@ test("résout une nouvelle catégorie B lors d'un UPDATE A vers B", async () => 
     existing: { accounting_nature: "ordinary", category_id: "catégorie-A", official_category_id: "rubrique-officielle-A", classification_precision: "Ancienne précision" },
     categoryId: presetB.id,
     classificationPrecision: "  Coiffeur à domicile  ",
+    requirePrecision: true,
   });
 
   assert.deepEqual(readIds, [presetB.id, officialB.id]);
@@ -205,4 +250,14 @@ test("résout une ancienne classification non stabilisée et efface explicitemen
   assert.equal(stabilized.officialCategoryId, official.id);
   const cleared = await resolveTransactionClassificationForUpdate({ supabase: client([official]), userId, transactionType: "expense", existing: old, categoryId: null });
   assert.deepEqual(cleared, { categoryId: null, officialCategoryId: null, classificationPrecision: null, accountingNature: "ordinary" });
+});
+
+test("calcule l'affichage et le préremplissage UX depuis la rubrique officielle", () => {
+  const official = category({ requires_precision: true });
+  const preset = category({ id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", owner_id: userId, name: "Coiffeur", is_system: false, official_code: null, official_category_id: official.id });
+  assert.equal(getEffectiveOfficialCategory([preset, official], preset.id), official);
+  assert.equal(getPrecisionAfterCategoryChange([preset, official], preset.id), "Coiffeur");
+  assert.equal(getPrecisionAfterCategoryChange([official], official.id), "");
+  assert.equal(getPrecisionAfterCategoryChange([preset, official], ""), "");
+  assert.equal(getEffectiveOfficialCategory([official], preset.id, official.id), official);
 });

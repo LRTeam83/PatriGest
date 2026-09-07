@@ -8,22 +8,36 @@ import { FieldError, FormMessage, SubmitButton } from "@/components/auth/form-co
 import { createTransactionAction, createTransferAction, updateTransactionAction } from "../actions";
 import { initialTransactionState } from "../state";
 import { isValuationAccount } from "@/domains/financial-accounts/utils/financial-account-utils";
+import { getEffectiveOfficialCategory, getPrecisionAfterCategoryChange } from "./transaction-classification-form";
 
 type Mode = "income" | "expense" | "transfer";
 
 export function TransactionForm({ personId, accounts, categories, transaction, defaultAccountId, defaultMode, returnTo }: { personId: string; accounts: FinancialAccount[]; categories: Category[]; transaction?: Transaction; defaultAccountId?: string; defaultMode?: Mode; returnTo?: string }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>(transaction?.transaction_type === "income" ? "income" : defaultMode ?? "expense");
+  const initialCategoryId = transaction?.category_id ?? "";
+  const [categoryId, setCategoryId] = useState(initialCategoryId);
+  const [classificationPrecision, setClassificationPrecision] = useState(transaction?.classification_precision ?? "");
   const returnHref = returnTo ?? (defaultAccountId ? `/dossiers/${personId}/comptes/${defaultAccountId}/operations` : `/dossiers/${personId}/operations`);
   const action = transaction ? updateTransactionAction.bind(null, personId, transaction.id, returnHref) : mode === "transfer" ? createTransferAction.bind(null, personId) : createTransactionAction.bind(null, personId);
   const [state, formAction] = useActionState(action, initialTransactionState);
   const activeAccounts = accounts.filter((account) => account.status === "active");
   const transactionalAccounts = activeAccounts.filter((account) => !isValuationAccount(account.account_type));
   const usableCategories = categories.filter((category) => (category.active || category.id === transaction?.category_id) && (category.usage === mode || category.usage === "both"));
+  const historicalCategoryUnavailable = Boolean(initialCategoryId && !categories.some((category) => category.id === initialCategoryId));
+  const effectiveOfficialCategory = getEffectiveOfficialCategory(
+    categories,
+    categoryId,
+    categoryId === initialCategoryId ? transaction?.official_category_id : null,
+  );
+  const precisionVisible = effectiveOfficialCategory?.requires_precision === true;
+  const precisionRequired = precisionVisible && (!transaction || categoryId !== initialCategoryId);
+  const changeMode = (nextMode: Mode) => { if (nextMode === mode) return; setMode(nextMode); setCategoryId(""); setClassificationPrecision(""); };
+  const changeCategory = (nextCategoryId: string) => { setCategoryId(nextCategoryId); setClassificationPrecision(getPrecisionAfterCategoryChange(categories, nextCategoryId)); };
   useEffect(() => { if (!transaction && mode !== "transfer" && state.status === "success") { router.push(returnHref); router.refresh(); } }, [mode, returnHref, router, state.status, transaction]);
 
   return <form action={formAction} className="grid gap-3 sm:grid-cols-2">
-    {!transaction && <div className="grid grid-cols-3 gap-2 sm:col-span-2" role="group" aria-label="Type d’opération">{([ ["income", "Recette"], ["expense", "Dépense"], ["transfer", "Virement"] ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setMode(value)} className={`button ${mode === value ? "button-primary" : "button-secondary"}`}>{label}</button>)}</div>}
+    {!transaction && <div className="grid grid-cols-3 gap-2 sm:col-span-2" role="group" aria-label="Type d’opération">{([ ["income", "Recette"], ["expense", "Dépense"], ["transfer", "Virement"] ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => changeMode(value)} className={`button ${mode === value ? "button-primary" : "button-secondary"}`}>{label}</button>)}</div>}
     {mode === "transfer" && !transaction ? <>
       <input type="hidden" name="kind" value="transfer" />
       <DateField name="transferDate" label="Date" errors={state.fieldErrors?.transferDate} />
@@ -38,7 +52,8 @@ export function TransactionForm({ personId, accounts, categories, transaction, d
       <DateField name="transactionDate" label="Date" defaultValue={transaction?.transaction_date} errors={state.fieldErrors?.transactionDate} />
       <Field name="label" label="Libellé" defaultValue={transaction?.label} errors={state.fieldErrors?.label} />
       <Field name="amount" label="Montant" type="number" step="0.01" defaultValue={transaction?.amount} errors={state.fieldErrors?.amount} />
-      <div><label className="auth-label" htmlFor="categoryId">Catégorie facultative</label><select className="auth-input" id="categoryId" name="categoryId" defaultValue={transaction?.category_id ?? ""}><option value="">Sans catégorie</option><CategoryOptions categories={usableCategories} /></select></div>
+      <div><label className="auth-label" htmlFor="categoryId">Catégorie facultative</label><select className="auth-input" id="categoryId" name="categoryId" value={categoryId} onChange={(event) => changeCategory(event.target.value)}><option value="">Sans catégorie</option>{historicalCategoryUnavailable && transaction && <option value={transaction.category_id ?? ""}>Catégorie historique indisponible</option>}<CategoryOptions categories={usableCategories} /></select></div>
+      {precisionVisible ? <div><label className="auth-label" htmlFor="classificationPrecision">Précision</label><input className="auth-input" id="classificationPrecision" name="classificationPrecision" value={classificationPrecision} onChange={(event) => setClassificationPrecision(event.target.value)} maxLength={160} required={precisionRequired} /><p className="mt-1.5 text-xs text-[#64748B]">Précisez la nature de cette opération.</p><FieldError messages={state.fieldErrors?.classificationPrecision} /></div> : <input type="hidden" name="classificationPrecision" value="" />}
       {mode === "expense" && <div><label className="auth-label" htmlFor="proofReference">Référence du justificatif</label>{transaction?.proof_reference ? <input className="auth-input bg-slate-50 text-[#475569]" id="proofReference" name="proofReference" readOnly value={transaction.proof_reference} /> : <p className="flex min-h-9 items-center rounded-lg bg-blue-50 px-3 text-xs text-[#475569]">Attribuée automatiquement après la création</p>}<input type="hidden" name="proofReference" value={transaction?.proof_reference ?? ""} /></div>}
       {mode === "income" && <input type="hidden" name="proofReference" value="" />}
       <Textarea name="comment" label="Commentaire facultatif" defaultValue={transaction?.comment} />
