@@ -5,13 +5,71 @@ import type { TransactionFilters, TransactionInput } from "../schemas/transactio
 import { CLOSED_PERIOD_ERROR } from "../errors";
 import { resolveTransactionClassification, resolveTransactionClassificationForUpdate } from "./transaction-classification";
 
-export type TransactionJournalItem = Transaction & { account: FinancialAccount; category: Category | null; transfer: Transfer | null; counterpartAccount: FinancialAccount | null; attachmentCount: number };
+import { resolveEffectiveTransactionClassification, type EffectiveTransactionClassification } from "./transaction-classification-read";
+
+export type TransactionJournalItem = Transaction & { account: FinancialAccount; category: Category | null; classification: EffectiveTransactionClassification; transfer: Transfer | null; counterpartAccount: FinancialAccount | null; attachmentCount: number };
 async function ownedPerson(id: string) { const auth = await getAuthenticatedUser(); const { data } = await auth.supabase.from("protected_persons").select("id").eq("id", id).maybeSingle(); if (!data) throw new Error("Dossier introuvable."); return auth; }
 async function ownedAccount(id: string, personId?: string) { const auth = await getAuthenticatedUser(); const { data: account } = await auth.supabase.from("financial_accounts").select("*").eq("id", id).maybeSingle(); if (!account || (personId && account.protected_person_id !== personId)) throw new Error("Compte introuvable."); const { data: person } = await auth.supabase.from("protected_persons").select("id").eq("id", account.protected_person_id).maybeSingle(); if (!person) throw new Error("Compte introuvable."); return { ...auth, account }; }
 function validDate(account: FinancialAccount, date: string) { return date >= account.initial_balance_date && (!account.opening_date || date >= account.opening_date) && (!account.closing_date || date <= account.closing_date); }
 async function ensureDateIsNotClosed(supabase: Awaited<ReturnType<typeof getAuthenticatedUser>>["supabase"], personId: string, date: string) { const { data } = await supabase.from("management_periods").select("id").eq("protected_person_id", personId).eq("status", "closed").lte("start_date", date).gte("end_date", date).limit(1); if (data?.length) throw new Error("Cette opération appartient à un exercice clôturé."); }
 
-export async function getTransactions(personId: string, filters: TransactionFilters = {}): Promise<TransactionJournalItem[]> { const { supabase } = await ownedPerson(personId); const { data: accounts, error: ae } = await supabase.from("financial_accounts").select("*").eq("protected_person_id", personId); if (ae) throw new Error("Impossible de charger les comptes."); if (!accounts.length) return []; let query = supabase.from("transactions").select("*").in("financial_account_id", accounts.map((a) => a.id)).order("transaction_date", { ascending: false }).order("created_at", { ascending: false }).order("id", { ascending: false }); if (filters.startDate) query = query.gte("transaction_date", filters.startDate); if (filters.endDate) query = query.lte("transaction_date", filters.endDate); if (filters.accountId) query = query.eq("financial_account_id", filters.accountId); if (filters.type) query = filters.type === "transfer" ? query.in("transaction_type", ["transfer_in", "transfer_out"]) : query.eq("transaction_type", filters.type); if (filters.categoryId) query = query.eq("category_id", filters.categoryId); if (filters.query) query = query.ilike("label", `%${filters.query.replace(/[%_]/g, "")}%`); if (filters.limit && filters.limit > 0) query = query.limit(filters.limit); const { data, error } = await query; if (error) throw new Error("Impossible de charger les opérations."); const categoryIds = [...new Set(data.map((t) => t.category_id).filter((id): id is string => Boolean(id)))]; const transferIds = [...new Set(data.map((t) => t.transfer_id).filter((id): id is string => Boolean(id)))]; const transactionIds = data.map((transaction) => transaction.id); const [categories, transfers, documents] = await Promise.all([categoryIds.length ? supabase.from("categories").select("*").in("id", categoryIds).then(({ data: rows }) => rows ?? []) : [], transferIds.length ? supabase.from("transfers").select("*").in("id", transferIds).then(({ data: rows }) => rows ?? []) : [], transactionIds.length ? supabase.from("transaction_documents").select("transaction_id").in("transaction_id", transactionIds).then(({ data: rows, error: documentError }) => { if (documentError) throw new Error("Impossible de charger les justificatifs."); return rows ?? []; }) : []]); const attachmentCounts = new Map<string, number>(); for (const document of documents) attachmentCounts.set(document.transaction_id, (attachmentCounts.get(document.transaction_id) ?? 0) + 1); return data.map((transaction) => { const transfer = transaction.transfer_id ? transfers.find((entry) => entry.id === transaction.transfer_id) ?? null : null; const counterpartId = transfer ? transaction.financial_account_id === transfer.source_account_id ? transfer.destination_account_id : transfer.source_account_id : null; return { ...transaction, account: accounts.find((account) => account.id === transaction.financial_account_id)!, category: categories.find((category) => category.id === transaction.category_id) ?? null, transfer, counterpartAccount: counterpartId ? accounts.find((account) => account.id === counterpartId) ?? null : null, attachmentCount: attachmentCounts.get(transaction.id) ?? 0 }; }); }
+export async function getTransactions(personId: string, filters: TransactionFilters = {}): Promise<TransactionJournalItem[]> {
+  const { supabase } = await ownedPerson(personId);
+  const { data: accounts, error: ae } = await supabase.from("financial_accounts").select("*").eq("protected_person_id", personId);
+  if (ae) throw new Error("Impossible de charger les comptes.");
+  if (!accounts.length) return [];
+  let query = supabase.from("transactions").select("*").in("financial_account_id", accounts.map((a) => a.id)).order("transaction_date", { ascending: false }).order("created_at", { ascending: false }).order("id", { ascending: false });
+  if (filters.startDate) query = query.gte("transaction_date", filters.startDate);
+  if (filters.endDate) query = query.lte("transaction_date", filters.endDate);
+  if (filters.accountId) query = query.eq("financial_account_id", filters.accountId);
+  if (filters.type) query = filters.type === "transfer" ? query.in("transaction_type", ["transfer_in", "transfer_out"]) : query.eq("transaction_type", filters.type);
+  if (filters.categoryId) query = query.eq("category_id", filters.categoryId);
+  if (filters.query) query = query.ilike("label", `%${filters.query.replace(/[%_]/g, "")}%`);
+  if (filters.limit && filters.limit > 0) query = query.limit(filters.limit);
+  const { data, error } = await query;
+  if (error) throw new Error("Impossible de charger les opérations.");
+
+  const categoryIds = [...new Set(data.map((transaction) => transaction.category_id).filter((id): id is string => Boolean(id)))];
+  const stableOfficialCategoryIds = data.map((transaction) => transaction.official_category_id).filter((id): id is string => Boolean(id));
+  const initialCategoryIds = [...new Set([...categoryIds, ...stableOfficialCategoryIds])];
+  const transferIds = [...new Set(data.map((transaction) => transaction.transfer_id).filter((id): id is string => Boolean(id)))];
+  const transactionIds = data.map((transaction) => transaction.id);
+  const [initialCategories, transfers, documents] = await Promise.all([
+    initialCategoryIds.length ? supabase.from("categories").select("*").in("id", initialCategoryIds).then(({ data: rows }) => rows ?? []) : [],
+    transferIds.length ? supabase.from("transfers").select("*").in("id", transferIds).then(({ data: rows }) => rows ?? []) : [],
+    transactionIds.length ? supabase.from("transaction_documents").select("transaction_id").in("transaction_id", transactionIds).then(({ data: rows, error: documentError }) => { if (documentError) throw new Error("Impossible de charger les justificatifs."); return rows ?? []; }) : [],
+  ]);
+  const categoryById = new Map(initialCategories.map((category) => [category.id, category]));
+  const missingPresetTargetIds = [...new Set(categoryIds.flatMap((categoryId) => {
+    const category = categoryById.get(categoryId);
+    return category && !category.is_system && category.official_category_id && !categoryById.has(category.official_category_id)
+      ? [category.official_category_id]
+      : [];
+  }))];
+  if (missingPresetTargetIds.length) {
+    const { data: presetTargets } = await supabase.from("categories").select("*").in("id", missingPresetTargetIds);
+    for (const category of presetTargets ?? []) categoryById.set(category.id, category);
+  }
+
+  const attachmentCounts = new Map<string, number>();
+  for (const document of documents) attachmentCounts.set(document.transaction_id, (attachmentCounts.get(document.transaction_id) ?? 0) + 1);
+  return data.map((transaction) => {
+    const category = transaction.category_id ? categoryById.get(transaction.category_id) ?? null : null;
+    const stableOfficialCategory = transaction.official_category_id ? categoryById.get(transaction.official_category_id) ?? null : null;
+    const legacyOfficialCategory = category?.official_category_id ? categoryById.get(category.official_category_id) ?? null : null;
+    const transfer = transaction.transfer_id ? transfers.find((entry) => entry.id === transaction.transfer_id) ?? null : null;
+    const counterpartId = transfer ? transaction.financial_account_id === transfer.source_account_id ? transfer.destination_account_id : transfer.source_account_id : null;
+    return {
+      ...transaction,
+      account: accounts.find((account) => account.id === transaction.financial_account_id)!,
+      category,
+      classification: resolveEffectiveTransactionClassification({ transaction, stableOfficialCategory, legacyCategory: category, legacyOfficialCategory }),
+      transfer,
+      counterpartAccount: counterpartId ? accounts.find((account) => account.id === counterpartId) ?? null : null,
+      attachmentCount: attachmentCounts.get(transaction.id) ?? 0,
+    };
+  });
+}
 export async function getTransaction(id: string) { const auth = await getAuthenticatedUser(); const { data } = await auth.supabase.from("transactions").select("*").eq("id", id).maybeSingle(); if (!data) return null; try { const { account } = await ownedAccount(data.financial_account_id); return { ...data, account }; } catch { return null; } }
 export async function createTransaction(personId: string, input: TransactionInput) { const { supabase, userId, account } = await ownedAccount(input.financialAccountId, personId); if (isValuationAccount(account.account_type)) throw new Error("Les recettes et dépenses nécessitent un compte transactionnel."); if (!validDate(account, input.transactionDate)) throw new Error("Date incompatible avec le compte."); const classification = await resolveTransactionClassification({ supabase, userId, transactionType: input.transactionType, categoryId: input.categoryId, classificationPrecision: input.classificationPrecision, requirePrecision: true }); const { data, error } = await supabase.from("transactions").insert({ financial_account_id: input.financialAccountId, transaction_date: input.transactionDate, transaction_type: input.transactionType, label: input.label, amount: input.amount, category_id: classification.categoryId, accounting_nature: classification.accountingNature, official_category_id: classification.officialCategoryId, classification_precision: classification.classificationPrecision, proof_reference: null, comment: input.comment }).select("id,proof_reference").single(); if (error?.message.toLocaleLowerCase("fr-FR").includes("exercice clôturé")) throw new Error(CLOSED_PERIOD_ERROR); if (error) throw new Error(error.message.includes("année") ? error.message : "Impossible de créer l’opération."); if (!data) throw new Error("Impossible de confirmer la création de l’opération."); return data; }
 export async function updateTransaction(id: string, personId: string, input: TransactionInput) { const existing = await getTransaction(id); if (!existing || existing.transfer_id || existing.account.protected_person_id !== personId) throw new Error("Opération introuvable."); const { supabase, userId, account } = await ownedAccount(input.financialAccountId, personId); if (isValuationAccount(account.account_type)) throw new Error("Les recettes et dépenses nécessitent un compte transactionnel."); await ensureDateIsNotClosed(supabase, personId, existing.transaction_date); await ensureDateIsNotClosed(supabase, personId, input.transactionDate); if (!validDate(account, input.transactionDate)) throw new Error("Date incompatible avec le compte."); const classification = await resolveTransactionClassificationForUpdate({ supabase, userId, transactionType: input.transactionType, existing, categoryId: input.categoryId, classificationPrecision: input.classificationPrecision, requirePrecision: true }); const { error } = await supabase.from("transactions").update({ financial_account_id: input.financialAccountId, transaction_date: input.transactionDate, transaction_type: input.transactionType, label: input.label, amount: input.amount, category_id: classification.categoryId, accounting_nature: classification.accountingNature, official_category_id: classification.officialCategoryId, classification_precision: classification.classificationPrecision, proof_reference: existing.proof_reference, comment: input.comment }).eq("id", id); if (error?.message.toLocaleLowerCase("fr-FR").includes("exercice clôturé")) throw new Error(CLOSED_PERIOD_ERROR); if (error) throw new Error(error.message.includes("année") ? error.message : "Impossible de modifier l’opération."); }
