@@ -9,9 +9,9 @@ import { getProperties, getDebts } from "@/domains/assets-liabilities/services";
 import { getFinancialAccounts } from "@/domains/financial-accounts/services/financial-account-service";
 import { getLatestBankStatementAtOrBefore } from "@/domains/bank-statements/services";
 import {
-  aggregateReportOperations,
   calculateAccountSituations,
 } from "./calculations";
+import { aggregateStableReportOperations } from "./stable-calculations";
 import {
   getManagementReportCompleteness,
   type ReportSectionCompleteness,
@@ -273,11 +273,12 @@ export async function getManagementReportSnapshot(
     ]);
   if (categoryResult.error || transactionResult.error)
     throw new Error("Impossible de calculer le compte de gestion.");
-  const aggregation = aggregateReportOperations(
+  const stableAggregation = aggregateStableReportOperations(
     transactionResult.data,
     categoryResult.data,
     includedAccounts,
   );
+  const { needsPrecision, ...aggregation } = stableAggregation;
   const situations = calculateAccountSituations(
     accountSelections,
     includedAccounts.flatMap((account) => account.transactions),
@@ -367,10 +368,16 @@ export async function getManagementReportSnapshot(
     {
       key: "operations",
       label: "Ressources et dépenses",
-      complete: aggregation.unclassified === 0,
-      missing: aggregation.unclassified
-        ? [`${aggregation.unclassified} opération(s) sans classement officiel`]
-        : [],
+      complete:
+        aggregation.unclassified === 0 && needsPrecision === 0,
+      missing: [
+        ...(aggregation.unclassified
+          ? [`${aggregation.unclassified} opération(s) sans classement officiel`]
+          : []),
+        ...(needsPrecision
+          ? [`${needsPrecision} opération(s) nécessitant une précision`]
+          : []),
+      ],
     },
     {
       key: "accounts",
