@@ -5,8 +5,9 @@ import { useFormStatus } from "react-dom";
 import { FormMessage, SubmitButton } from "@/components/auth/form-controls";
 import { AppConfirmDialog } from "@/components/ui/app-confirm-dialog";
 import type { AccountValuation } from "@/types/database";
-import { closeFinancialAccountAction, createAccountValuationAction, deleteFinancialAccountAction, reopenFinancialAccountAction, updateAccountValuationAction } from "../actions";
+import { closeFinancialAccountAction, createAccountValuationAction, deleteAccountValuationAction, deleteFinancialAccountAction, reopenFinancialAccountAction, updateAccountValuationAction } from "../actions";
 import { initialFinancialAccountState } from "../state";
+import { formatCurrency, formatFinancialDate } from "../utils/financial-account-utils";
 
 export function CloseAccountForm({ protectedPersonId, accountId, accountName, minimumDate }: { protectedPersonId: string; accountId: string; accountName: string; minimumDate: string }) {
   const [open, setOpen] = useState(false);
@@ -47,6 +48,17 @@ export function EditValuationButton({ protectedPersonId, accountId, valuation }:
   }
 
   return <><button type="button" className="text-xs font-semibold text-[#2563EB] hover:underline" onClick={openDialog}>Modifier</button>{open && <EditValuationDialog key={dialogKey} protectedPersonId={protectedPersonId} accountId={accountId} valuation={valuation} onClose={() => setOpen(false)} />}</>;
+}
+
+export function DeleteValuationButton({ protectedPersonId, accountId, valuation }: { protectedPersonId: string; accountId: string; valuation: AccountValuation }) {
+  const [open, setOpen] = useState(false);
+  const [state, action] = useActionState(
+    deleteAccountValuationAction.bind(null, protectedPersonId, accountId, valuation.id),
+    initialFinancialAccountState,
+  );
+  const subject = `${formatFinancialDate(valuation.valuation_date)} — ${formatCurrency(valuation.value)}`;
+
+  return <><button type="button" className="text-xs font-semibold text-[#B91C1C] hover:underline" onClick={() => setOpen(true)}>Supprimer</button><form action={action}><AppConfirmDialog open={open && state.status !== "success"} title="Supprimer cette valorisation ?" description="Cette suppression est définitive. Si une valorisation précédente existe, elle redeviendra automatiquement la valeur courante du compte." subject={subject} onClose={() => setOpen(false)} actions={<DialogSubmitButton pendingLabel="Suppression…" destructive>Supprimer</DialogSubmitButton>}><FormMessage state={state} /></AppConfirmDialog></form></>;
 }
 
 function EditValuationDialog({ protectedPersonId, accountId, valuation, onClose }: { protectedPersonId: string; accountId: string; valuation: AccountValuation; onClose: () => void }) {

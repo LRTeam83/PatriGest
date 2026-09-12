@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { accountValuationSchema } from "./schemas/account-valuation-schema";
 import { closeFinancialAccountSchema, financialAccountSchema } from "./schemas/financial-account-schema";
-import { closeFinancialAccount, createAccountValuation, createFinancialAccount, deleteFinancialAccount, getFinancialAccount, reopenFinancialAccount, updateAccountValuation, updateFinancialAccount } from "./services/financial-account-service";
+import { closeFinancialAccount, createAccountValuation, createFinancialAccount, deleteAccountValuation, deleteFinancialAccount, getFinancialAccount, reopenFinancialAccount, updateAccountValuation, updateFinancialAccount } from "./services/financial-account-service";
 import type { FinancialAccountActionState } from "./state";
 
 function invalid(error: z.ZodError): FinancialAccountActionState { return { status: "error", message: "Vérifiez les informations saisies.", fieldErrors: error.flatten().fieldErrors }; }
@@ -88,4 +88,32 @@ export async function updateAccountValuationAction(protectedPersonId: string, ac
   } catch (error) {
     return { status: "error", message: error instanceof Error ? error.message : "Impossible de modifier la valorisation." };
   }
+}
+
+export async function deleteAccountValuationAction(
+  protectedPersonId: string,
+  accountId: string,
+  valuationId: string,
+  _state: FinancialAccountActionState,
+  _formData: FormData,
+): Promise<FinancialAccountActionState> {
+  void _state;
+  void _formData;
+  if (!validIds(protectedPersonId, accountId, valuationId)) {
+    return { status: "error", message: "Valorisation invalide." };
+  }
+
+  try {
+    await deleteAccountValuation(accountId, valuationId);
+  } catch {
+    return {
+      status: "error",
+      message: "Impossible de supprimer la valorisation. Veuillez réessayer.",
+    };
+  }
+
+  revalidatePath(`/dossiers/${protectedPersonId}`);
+  revalidatePath(`/dossiers/${protectedPersonId}/comptes`);
+  revalidatePath(`/dossiers/${protectedPersonId}/comptes/${accountId}`);
+  return { status: "success", message: "La valorisation a été supprimée." };
 }

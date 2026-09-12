@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "@/domains/protected-persons/services/authe
 import type { FinancialAccountInput } from "../schemas/financial-account-schema";
 import type { AccountValuationInput } from "../schemas/account-valuation-schema";
 import { isValuationAccount } from "../utils/financial-account-utils";
+import { deleteAccountValuationRow } from "./account-valuation-delete";
 
 export type FinancialAccountWithValuations = FinancialAccount & { valuations: AccountValuation[]; transactions: Transaction[] };
 
@@ -136,4 +137,16 @@ export async function updateAccountValuation(accountId: string, valuationId: str
   if (error?.code === "23505") throw new Error("Une valorisation existe déjà à cette date.");
   if (error) throw new Error("Impossible de modifier la valorisation.");
   return data;
+}
+
+export async function deleteAccountValuation(
+  accountId: string,
+  valuationId: string,
+) {
+  const { supabase, account } = await requireManagedAccount(accountId);
+  if (!isValuationAccount(account.account_type)) {
+    throw new Error("Ce compte n’accepte pas de valorisations.");
+  }
+
+  await deleteAccountValuationRow(supabase, accountId, valuationId);
 }
